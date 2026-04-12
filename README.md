@@ -62,7 +62,7 @@ All routine configuration is at the top of `src/index.js`.
 | `COLOR_REGULAR_B` | See code | Regular card background, odd positions |
 | `COLOR_NEW_A` | See code | New item card background, even positions |
 | `COLOR_NEW_B` | See code | New item card background, odd positions |
-| `DELETE_EXPIRED_AFTER_DAYS` | `60` | Days after expiration before a non-recurring row is deleted. Set to `-1` to disable deletion. |
+| `DELETE_EXPIRED_AFTER_DAYS` | `-1` | Days after expiration before a non-recurring row is deleted. Set to `-1` to disable deletion. |
 
 ---
 
