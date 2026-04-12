@@ -60,6 +60,12 @@ const FONT_SIZE_META = '0.85rem';
 /** Font size for the main news body text. */
 const FONT_SIZE_BODY = '1rem';
 
+// --- Accent color ---
+
+/** FFD brand red — used as a left border stripe on new items and
+ *  as a title underline on regular items. */
+const ACCENT_COLOR = '#C8102E';
+
 // --- Card color configuration ---
 // Regular (non-new) items alternate between these two backgrounds.
 // Both are subtle dark tints to visually separate cards against
@@ -85,7 +91,7 @@ const COLOR_NEW_B = 'rgba(210,210,210,0.30)';
 /** Non-recurring rows expired more than this many days ago are
  *  deleted by the daily cron job.
  *  Set to -1 to disable automatic deletion entirely. */
-const DELETE_EXPIRED_AFTER_DAYS = -1;
+const DELETE_EXPIRED_AFTER_DAYS = 7;
 
 
 // ================================================================
@@ -567,16 +573,14 @@ function escapeHtml(str) {
  * client-side scroll logic uses the server-side configuration values.
  *
  * @param {object[]} items   - Active, sorted news items
- * @param {string}   layout  - Validated layout parameter (validated only;
- *                             news display is inherently a single-column
- *                             scrollable list regardless of layout)
+ * @param {string}   layout  - Validated layout parameter
  * @param {string}   tabName - Sheet tab name (used in <title> only)
  * @returns {string} Full HTML document string
  */
 function renderHtml(items, layout, tabName) {
 
   // Build card HTML. Track new/regular counts separately so the
-  // alternating color resets between the two groups.
+  // alternating color resets independently between the two groups.
   let newCount     = 0;
   let regularCount = 0;
 
@@ -584,13 +588,33 @@ function renderHtml(items, layout, tabName) {
     ? '<div class="no-news">No current news</div>'
     : items.map(function (item) {
 
-        // Assign alternating background color based on new/regular status.
         let bgColor;
+        let cardStyle;
+        let titleDivider;
+
         if (item.isNew) {
-          bgColor = (newCount % 2 === 0) ? COLOR_NEW_A : COLOR_NEW_B;
+          // New items: alternating brighter backgrounds + red left border stripe.
+          bgColor   = (newCount % 2 === 0) ? COLOR_NEW_A : COLOR_NEW_B;
+          // Left border is 4px red; remaining three sides use the standard
+          // subtle white border. Left padding is reduced by 3px to compensate
+          // for the wider border so body text stays visually aligned.
+          cardStyle = 'background:' + bgColor + ';' +
+                      'border-top:1px solid rgba(255,255,255,0.10);' +
+                      'border-right:1px solid rgba(255,255,255,0.10);' +
+                      'border-bottom:1px solid rgba(255,255,255,0.10);' +
+                      'border-left:4px solid ' + ACCENT_COLOR + ';' +
+                      'padding-left:calc(1rem - 3px);';
+          titleDivider = '';
           newCount++;
         } else {
-          bgColor = (regularCount % 2 === 0) ? COLOR_REGULAR_A : COLOR_REGULAR_B;
+          // Regular items: alternating subtle backgrounds + red title underline.
+          bgColor      = (regularCount % 2 === 0) ? COLOR_REGULAR_A : COLOR_REGULAR_B;
+          cardStyle    = 'background:' + bgColor + ';' +
+                         'border:1px solid rgba(255,255,255,0.10);';
+          // Thin red line beneath the title, matching the probationary display
+          // divider style. Width is 60% to feel proportional without spanning
+          // the full card.
+          titleDivider = '<div class="title-divider"></div>';
           regularCount++;
         }
 
@@ -603,8 +627,9 @@ function renderHtml(items, layout, tabName) {
         const safeBody = escapeHtml(item.text).replace(/\n/g, '<br>');
 
         return (
-          '<div class="news-card" style="background:' + bgColor + ';">' +
+          '<div class="news-card" style="' + cardStyle + '">' +
             '<div class="card-title">' + newBadge + escapeHtml(item.title) + '</div>' +
+            titleDivider +
             '<div class="card-meta">' +
               '<div><strong>Posted:</strong> '    + formatDateTime(item.activePosted)  + '</div>' +
               '<div><strong>Expires:</strong> '   + formatDateTime(item.activeExpires) + '</div>' +
@@ -625,7 +650,7 @@ function renderHtml(items, layout, tabName) {
     '  window.addEventListener("load", function () {' +
     '    var totalH = document.documentElement.scrollHeight;' +
     '    var viewH  = window.innerHeight;' +
-    '    if (totalH <= viewH) return;' +  // No scrolling needed.
+    '    if (totalH <= viewH) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
     '    var rawSpeed      = overflow / availableTime;' +
@@ -669,9 +694,10 @@ function renderHtml(items, layout, tabName) {
     '  margin-top: 3rem;' +
     '}' +
 
+    // Card base — border and background are set inline per card so that
+    // new and regular items can use different border styles.
     '.news-card {' +
     '  border-radius: 6px;' +
-    '  border: 1px solid rgba(255,255,255,0.10);' +
     '  padding: 0.8rem 1rem;' +
     '  margin-bottom: 0.65rem;' +
     '}' +
@@ -697,6 +723,17 @@ function renderHtml(items, layout, tabName) {
     '  padding: 0.15rem 0.4rem;' +
     '  border-radius: 3px;' +
     '  flex-shrink: 0;' +
+    '}' +
+
+    // Red accent underline beneath the title on regular (non-new) cards.
+    // Matches the divider style used in the probationary firefighter display.
+    '.title-divider {' +
+    '  width: 60%;' +
+    '  height: 2px;' +
+    '  background: ' + ACCENT_COLOR + ';' +
+    '  opacity: 0.85;' +
+    '  border-radius: 1px;' +
+    '  margin-bottom: 0.45rem;' +
     '}' +
 
     // Metadata block — Posted, Expires, Posted By each on their own line.
