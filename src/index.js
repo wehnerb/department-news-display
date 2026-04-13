@@ -66,6 +66,10 @@ const FONT_SIZE_BODY = '1rem';
  *  as a title underline on regular items. */
 const ACCENT_COLOR = '#C8102E';
 
+/** Background color used when ?bg=dark is set.
+ *  Matches the probationary-firefighter-display dark testing background. */
+const DARK_BG_COLOR = '#111111';
+
 // --- Card color configuration ---
 // Regular (non-new) items alternate between these two backgrounds.
 // Both are subtle dark tints to visually separate cards against
@@ -174,6 +178,10 @@ export default {
       ? layoutParam.toLowerCase()
       : 'split';
 
+    // ?bg=dark renders with a solid dark background for browser-based testing.
+    // Matches the probationary-firefighter-display ?bg=dark parameter behaviour.
+    const darkBg = sanitizeParam(url.searchParams.get('bg')) === 'dark';
+
     try {
       // Authenticate with Google and fetch sheet data.
       const token = await getAccessToken(
@@ -187,18 +195,12 @@ export default {
       const items = processRows(rows, now);
 
       // Render and return the HTML page.
-      const html = renderHtml(items, layout, tabName);
+      const html = renderHtml(items, layout, tabName, darkBg);
       return new Response(html, {
         headers: {
           'Content-Type':           'text/html; charset=UTF-8',
-          // Prevent browser caching so meta-refresh always gets fresh content.
           'Cache-Control':          'no-store',
-          // Prevent MIME-type sniffing attacks.
           'X-Content-Type-Options': 'nosniff',
-          // NOTE: X-Frame-Options is intentionally NOT set here.
-          // This Worker is embedded as a full-screen iframe by the display
-          // system. Adding X-Frame-Options: SAMEORIGIN causes immediate
-          // white screens on every station display.
         },
       });
 
@@ -575,9 +577,11 @@ function escapeHtml(str) {
  * @param {object[]} items   - Active, sorted news items
  * @param {string}   layout  - Validated layout parameter
  * @param {string}   tabName - Sheet tab name (used in <title> only)
+ * @param {boolean}  darkBg  - True when ?bg=dark is set; renders solid dark
+ *                             background for browser-based testing
  * @returns {string} Full HTML document string
  */
-function renderHtml(items, layout, tabName) {
+function renderHtml(items, layout, tabName, darkBg) {
 
   // Build card HTML. Track new/regular counts separately so the
   // alternating color resets independently between the two groups.
@@ -679,7 +683,7 @@ function renderHtml(items, layout, tabName) {
     '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
 
     'body {' +
-    '  background: transparent;' +
+    '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
     '  color: #f0f0f0;' +
     '  font-family: ' + FONT_FAMILY + ';' +
     '  font-size: '   + FONT_SIZE_BODY + ';' +
