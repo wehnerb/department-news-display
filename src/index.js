@@ -164,6 +164,11 @@ export default {
     const stationParam = sanitizeParam(url.searchParams.get('station')) || '';
     const layoutParam  = sanitizeParam(url.searchParams.get('layout'))  || 'split';
 
+    // Parse ?bg=dark here — before any error responses — so every page
+    // rendered by this worker can respect the dark background parameter,
+    // including the invalid station error page below.
+    const darkBg = sanitizeParam(url.searchParams.get('bg')) === 'dark';
+
     // Validate ?station= parameter against known tab names.
     const tabName = STATION_TAB_MAP[stationParam.toLowerCase()];
     if (!tabName) {
@@ -173,7 +178,8 @@ export default {
         '<head><meta charset="UTF-8"><title>FFD News</title>' +
         '<style>' +
         '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
-        'html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent;' +
+        'html, body { width: 100vw; height: 100vh; overflow: hidden;' +
+        '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
         '  font-family: "Segoe UI", Arial, Helvetica, sans-serif;' +
         '  display: flex; align-items: center; justify-content: center; }' +
         '.err-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 5vw; }' +
@@ -194,10 +200,6 @@ export default {
     const layout = VALID_LAYOUTS.includes(layoutParam.toLowerCase())
       ? layoutParam.toLowerCase()
       : 'split';
-
-    // ?bg=dark renders with a solid dark background for browser-based testing.
-    // Matches the probationary-firefighter-display ?bg=dark parameter behaviour.
-    const darkBg = sanitizeParam(url.searchParams.get('bg')) === 'dark';
 
     try {
       // Authenticate with Google and fetch sheet data.
