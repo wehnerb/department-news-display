@@ -168,8 +168,25 @@ export default {
     const tabName = STATION_TAB_MAP[stationParam.toLowerCase()];
     if (!tabName) {
       return new Response(
-        'Invalid or missing ?station= parameter. Valid values: dept, 1\u20138.',
-        { status: 400, headers: { 'Content-Type': 'text/plain; charset=UTF-8' } }
+        '<!DOCTYPE html>' +
+        '<html lang="en">' +
+        '<head><meta charset="UTF-8"><title>FFD News</title>' +
+        '<style>' +
+        '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent;' +
+        '  font-family: "Segoe UI", Arial, Helvetica, sans-serif;' +
+        '  display: flex; align-items: center; justify-content: center; }' +
+        '.err-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 5vw; }' +
+        '.err-title { font-size: 1.8rem; font-weight: 700; color: #C8102E; letter-spacing: 0.06em; }' +
+        '.err-sub   { font-size: 1.1rem; color: rgba(255,255,255,0.92); }' +
+        '</style></head>' +
+        '<body>' +
+        '<div class="err-wrap">' +
+        '<div class="err-title">INVALID STATION</div>' +
+        '<div class="err-sub">Add ?station= to the URL &mdash; valid values: dept, 1&ndash;8</div>' +
+        '</div>' +
+        '</body></html>',
+        { status: 400, headers: { 'Content-Type': 'text/html; charset=UTF-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -224,8 +241,8 @@ export default {
         '  display: flex; align-items: center; justify-content: center;' +
         '}' +
         '.err-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 5vw; }' +
-        '.err-title { font-size: 1.8rem; font-weight: 700; color: rgba(255,255,255,0.92); letter-spacing: 0.06em; }' +
-        '.err-sub   { font-size: 1.1rem; color: rgba(255,255,255,0.55); }' +
+        '.err-title { font-size: 1.8rem; font-weight: 700; color: #C8102E; letter-spacing: 0.06em; }' +
+        '.err-sub   { font-size: 1.1rem; color: rgba(255,255,255,0.92); }' +
         '</style>' +
         '</head>' +
         '<body>' +
