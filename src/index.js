@@ -208,10 +208,41 @@ export default {
       // Log full error server-side; return only a generic message to the
       // client to avoid leaking implementation details.
       console.error('Fetch handler error:', err);
-      return new Response(
-        'An error occurred loading the news display.',
-        { status: 500, headers: { 'Content-Type': 'text/plain; charset=UTF-8' } }
-      );
+      const errHtml =
+        '<!DOCTYPE html>' +
+        '<html lang="en">' +
+        '<head>' +
+        '<meta charset="UTF-8">' +
+        '<meta http-equiv="refresh" content="60">' +
+        '<title>FFD News</title>' +
+        '<style>' +
+        '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'html, body {' +
+        '  width: 100vw; height: 100vh; overflow: hidden;' +
+        '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
+        '  font-family: "Segoe UI", Arial, Helvetica, sans-serif;' +
+        '  display: flex; align-items: center; justify-content: center;' +
+        '}' +
+        '.err-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 5vw; }' +
+        '.err-title { font-size: 1.8rem; font-weight: 700; color: rgba(255,255,255,0.92); letter-spacing: 0.06em; }' +
+        '.err-sub   { font-size: 1.1rem; color: rgba(255,255,255,0.55); }' +
+        '</style>' +
+        '</head>' +
+        '<body>' +
+        '<div class="err-wrap">' +
+        '<div class="err-title">NEWS UNAVAILABLE</div>' +
+        '<div class="err-sub">Retrying shortly</div>' +
+        '</div>' +
+        '</body>' +
+        '</html>';
+      return new Response(errHtml, {
+        status: 200,
+        headers: {
+          'Content-Type':           'text/html; charset=UTF-8',
+          'Cache-Control':          'no-store',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
     }
   },
 
