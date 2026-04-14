@@ -183,7 +183,7 @@ export default {
         '<body>' +
         '<div class="err-wrap">' +
         '<div class="err-title">INVALID STATION</div>' +
-        '<div class="err-sub">Add ?station= to the URL &mdash; valid values: dept, 1&ndash;8</div>' +
+        '<div class="err-sub">Check URL configuration</div>' +
         '</div>' +
         '</body></html>',
         { status: 400, headers: { 'Content-Type': 'text/html; charset=UTF-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }
