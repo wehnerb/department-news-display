@@ -578,8 +578,69 @@ function processRows(rows, now) {
  */
 function parseSheetDateTime(raw) {
   if (!raw || typeof raw !== 'string') return null;
-  const d = new Date(raw.trim());
-  return isNaN(d.getTime()) ? null : d;
+  var s = raw.trim();
+  if (!s) return null;
+
+  // Primary format: M/D/YYYY H:MM AM/PM (e.g. "4/18/2026 3:00 PM")
+  // This is the format used in the department-news Google Sheet.
+  // Parsed as America/Chicago wall-clock time using the offset-correction
+  // technique from calendar-display's parseLocalDateTimeInZone — avoids the
+  // bug where new Date("4/18/2026 3:00 PM") is treated as UTC by the
+  // Cloudflare Workers runtime (which runs on UTC hosts).
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (m) {
+    var mo   = parseInt(m[1], 10);
+    var dy   = parseInt(m[2], 10);
+    var yr   = parseInt(m[3], 10);
+    var hr   = parseInt(m[4], 10);
+    var mn   = parseInt(m[5], 10);
+    var ampm = m[6] ? m[6].toUpperCase() : null;
+
+    // Convert 12-hour clock to 24-hour
+    if (ampm === 'PM' && hr !== 12) { hr += 12; }
+    if (ampm === 'AM' && hr === 12) { hr = 0;   }
+
+    // Step 1: treat the components as UTC to get an initial Date
+    var utcApprox = new Date(Date.UTC(yr, mo - 1, dy, hr, mn, 0));
+
+    // Step 2: find what wall-clock time that UTC instant shows in Chicago
+    var parts = {};
+    var formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      year:     'numeric',
+      month:    '2-digit',
+      day:      '2-digit',
+      hour:     '2-digit',
+      minute:   '2-digit',
+      second:   '2-digit',
+      hour12:   false,
+    });
+    for (var i = 0; i < formatter.formatToParts(utcApprox).length; i++) {
+      var part = formatter.formatToParts(utcApprox)[i];
+      if (part.type !== 'literal') { parts[part.type] = part.value; }
+    }
+
+    // Step 3: compute the offset and correct the UTC instant so that
+    // the wall-clock time in Chicago equals what was entered in the sheet
+    var displayedMs = Date.UTC(
+      parseInt(parts.year,   10),
+      parseInt(parts.month,  10) - 1,
+      parseInt(parts.day,    10),
+      parseInt(parts.hour,   10) % 24,
+      parseInt(parts.minute, 10),
+      parseInt(parts.second, 10)
+    );
+    var intendedMs = Date.UTC(yr, mo - 1, dy, hr, mn, 0);
+
+    return new Date(utcApprox.getTime() - (displayedMs - intendedMs));
+  }
+
+  // Fallback: native Date parsing for any format not matching the primary pattern.
+  // Note: new Date() on an ambiguous string may still parse as UTC on this runtime.
+  // If the sheet format ever changes, update the primary regex above rather than
+  // relying on this fallback.
+  var fallback = new Date(s);
+  return isNaN(fallback.getTime()) ? null : fallback;
 }
 
 
