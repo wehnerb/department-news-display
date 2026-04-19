@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from './shared/fetch-helpers.js';
+
 // ================================================================
 // department-news-display — Cloudflare Worker
 // Renders active station or department news from Google Sheets.
@@ -346,11 +348,11 @@ async function getAccessToken(email, rawPrivateKey) {
   const jwt = signingInput + '.' + arrayBufferToBase64url(signatureBuf);
 
   // Step 4 — Exchange the signed JWT for a short-lived access token.
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+  const tokenRes = await fetchWithTimeout('https://oauth2.googleapis.com/token', {
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body:    'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt,
-  });
+  }, 10000);
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
@@ -446,9 +448,9 @@ async function fetchSheetRows(env, token, tabName) {
     '/values/' + range +
     '?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING';
 
-  const res = await fetch(apiUrl, {
+  const res = await fetchWithTimeout(apiUrl, {
     headers: { 'Authorization': 'Bearer ' + token },
-  });
+  }, 8000);
 
   if (!res.ok) {
     throw new Error('Sheets API error ' + res.status + ' fetching tab "' + tabName + '"');
@@ -907,11 +909,12 @@ async function runCleanup(env) {
   const thresholdMs = DELETE_EXPIRED_AFTER_DAYS * 24 * 60 * 60 * 1000;
 
   // Fetch spreadsheet metadata to resolve tab names → internal numeric sheet IDs.
-  const metaRes = await fetch(
+  const metaRes = await fetchWithTimeout(
     'https://sheets.googleapis.com/v4/spreadsheets/' +
     encodeURIComponent(env.GOOGLE_SHEET_ID) +
     '?fields=sheets(properties(title,sheetId))',
-    { headers: { 'Authorization': 'Bearer ' + token } }
+    { headers: { 'Authorization': 'Bearer ' + token } },
+    8000
   );
   if (!metaRes.ok) {
     console.error('Cleanup: failed to fetch spreadsheet metadata (' + metaRes.status + ')');
@@ -942,9 +945,9 @@ async function runCleanup(env) {
       '/values/' + range +
       '?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING';
 
-    const rowsRes = await fetch(apiUrl, {
+    const rowsRes = await fetchWithTimeout(apiUrl, {
       headers: { 'Authorization': 'Bearer ' + token },
-    });
+    }, 8000);
     if (!rowsRes.ok) {
       console.error('Cleanup: failed to fetch rows for "' + tabName + '" (' + rowsRes.status + ')');
       continue;
@@ -995,7 +998,7 @@ async function runCleanup(env) {
     }
 
     // Execute all deletions for this tab in a single batch request.
-    const batchRes = await fetch(
+    const batchRes = await fetchWithTimeout(
       'https://sheets.googleapis.com/v4/spreadsheets/' +
       encodeURIComponent(env.GOOGLE_SHEET_ID) + ':batchUpdate',
       {
@@ -1005,7 +1008,8 @@ async function runCleanup(env) {
           'Content-Type':   'application/json',
         },
         body: JSON.stringify({ requests: deleteRequests }),
-      }
+      },
+      8000
     );
 
     if (!batchRes.ok) {
