@@ -214,8 +214,34 @@ export default {
       if (!env[key]) {
         console.error('[department-news-display] Missing required secret: ' + key);
         return new Response(
-          'Configuration error: missing secret ' + key,
-          { status: 500, headers: { 'Content-Type': 'text/plain' } }
+          '<!DOCTYPE html>' +
+          '<html lang="en"><head><meta charset="UTF-8">' +
+          '<meta http-equiv="refresh" content="60">' +
+          '<style>' +
+          '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}' +
+          'html,body{' +
+          '  width:100vw;height:100vh;overflow:hidden;' +
+          '  background:' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
+          '  font-family:"Segoe UI",Arial,Helvetica,sans-serif;' +
+          '  display:flex;align-items:center;justify-content:center;}' +
+          '.err-wrap{display:flex;flex-direction:column;align-items:center;' +
+          '  gap:8px;text-align:center;padding:0 5vw;}' +
+          '.err-title{font-size:1.8rem;font-weight:700;color:#C8102E;' +
+          '  letter-spacing:0.06em;}' +
+          '.err-sub{font-size:1.1rem;color:rgba(255,255,255,0.92);}' +
+          '</style></head><body>' +
+          '<div class="err-wrap">' +
+          '<div class="err-title">CONFIGURATION ERROR</div>' +
+          '<div class="err-sub">Missing secret: ' + key + '</div>' +
+          '</div></body></html>',
+          {
+            status: 500,
+            headers: {
+              'Content-Type':           'text/html; charset=UTF-8',
+              'Cache-Control':          'no-store',
+              'X-Content-Type-Options': 'nosniff',
+            },
+          }
         );
       }
     }
