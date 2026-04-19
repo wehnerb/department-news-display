@@ -1,4 +1,7 @@
 import { fetchWithTimeout } from './shared/fetch-helpers.js';
+import { escapeHtml, sanitizeParam } from './shared/html.js';
+import { getAccessToken } from './shared/google-auth.js';
+import { DARK_BG_COLOR } from './shared/constants.js';
 
 // ================================================================
 // department-news-display — Cloudflare Worker
@@ -68,10 +71,6 @@ const FONT_SIZE_BODY = '1rem';
  *  as a title underline on regular items. */
 const ACCENT_COLOR = '#C8102E';
 
-/** Background color used when ?bg=dark is set.
- *  Matches the probationary-firefighter-display dark testing background. */
-const DARK_BG_COLOR = '#111111';
-
 // --- Card color configuration ---
 // Regular (non-new) items alternate between these two backgrounds.
 // Both are subtle dark tints to visually separate cards against
@@ -98,14 +97,6 @@ const COLOR_NEW_B = 'rgba(210,210,210,0.30)';
  *  deleted by the daily cron job.
  *  Set to -1 to disable automatic deletion entirely. */
 const DELETE_EXPIRED_AFTER_DAYS = 7;
-
-
-// ================================================================
-// GOOGLE AUTH SCOPE
-// spreadsheets scope is required for both read (display) and
-// write (row deletion) access to the sheet.
-// ================================================================
-const GOOGLE_AUTH_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 
 
 // ================================================================
@@ -203,11 +194,54 @@ export default {
       ? layoutParam.toLowerCase()
       : 'split';
 
+    var REQUIRED_SECRETS = [
+      'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+      'GOOGLE_PRIVATE_KEY',
+      'GOOGLE_SHEET_ID'
+    ];
+    for (var i = 0; i < REQUIRED_SECRETS.length; i++) {
+      var key = REQUIRED_SECRETS[i];
+      if (!env[key]) {
+        console.error('[department-news-display] Missing required secret: ' + key);
+        return new Response(
+          '<!DOCTYPE html>' +
+          '<html lang="en"><head><meta charset="UTF-8">' +
+          '<meta http-equiv="refresh" content="60">' +
+          '<style>' +
+          '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}' +
+          'html,body{' +
+          '  width:100vw;height:100vh;overflow:hidden;' +
+          '  background:' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
+          '  font-family:"Segoe UI",Arial,Helvetica,sans-serif;' +
+          '  display:flex;align-items:center;justify-content:center;}' +
+          '.err-wrap{display:flex;flex-direction:column;align-items:center;' +
+          '  gap:8px;text-align:center;padding:0 5vw;}' +
+          '.err-title{font-size:1.8rem;font-weight:700;color:#C8102E;' +
+          '  letter-spacing:0.06em;}' +
+          '.err-sub{font-size:1.1rem;color:rgba(255,255,255,0.92);}' +
+          '</style></head><body>' +
+          '<div class="err-wrap">' +
+          '<div class="err-title">CONFIGURATION ERROR</div>' +
+          '<div class="err-sub">Missing secret: ' + key + '</div>' +
+          '</div></body></html>',
+          {
+            status: 500,
+            headers: {
+              'Content-Type':           'text/html; charset=UTF-8',
+              'Cache-Control':          'no-store',
+              'X-Content-Type-Options': 'nosniff',
+            },
+          }
+        );
+      }
+    }
+
     try {
       // Authenticate with Google and fetch sheet data.
       const token = await getAccessToken(
         env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        env.GOOGLE_PRIVATE_KEY
+        env.GOOGLE_PRIVATE_KEY,
+        'https://www.googleapis.com/auth/spreadsheets'
       );
       const rows = await fetchSheetRows(env, token, tabName);
 
@@ -279,132 +313,6 @@ export default {
     ctx.waitUntil(runCleanup(env));
   },
 };
-
-
-// ================================================================
-// GOOGLE SERVICE ACCOUNT AUTHENTICATION
-// ================================================================
-// Generates a short-lived Google OAuth2 access token from service
-// account credentials stored as Worker secrets. Uses RSA-SHA256
-// JWT signing via the Web Crypto API — no external dependencies.
-//
-// Required secrets:
-//   GOOGLE_SERVICE_ACCOUNT_EMAIL — service account email address
-//   GOOGLE_PRIVATE_KEY           — RSA private key from Google
-//                                  Cloud JSON key file
-
-/**
- * Builds a signed JWT and exchanges it for a Google OAuth2 access token.
- *
- * @param {string} email         - Service account email address
- * @param {string} rawPrivateKey - PEM private key (with literal \n sequences)
- * @returns {Promise<string>} A valid OAuth2 access token
- */
-async function getAccessToken(email, rawPrivateKey) {
-
-  // Step 1 — Build the JWT header and payload.
-  const now     = Math.floor(Date.now() / 1000);
-  const header  = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = base64url(JSON.stringify({
-    iss:   email,
-    scope: GOOGLE_AUTH_SCOPE,
-    aud:   'https://oauth2.googleapis.com/token',
-    iat:   now,
-    exp:   now + 3600,
-  }));
-
-  const signingInput = header + '.' + payload;
-
-  // Step 2 — Import the RSA private key via the Web Crypto API.
-  // The key arrives from the secret with literal \n sequences;
-  // convert them to real newlines before stripping the PEM envelope.
-  // Both PKCS#8 and traditional RSA key headers are handled.
-  const pemString = rawPrivateKey.replace(/\\n/g, '\n');
-  const pemBody   = pemString
-    .replace('-----BEGIN PRIVATE KEY-----',     '')
-    .replace('-----END PRIVATE KEY-----',       '')
-    .replace('-----BEGIN RSA PRIVATE KEY-----', '')
-    .replace('-----END RSA PRIVATE KEY-----',   '')
-    .replace(/\n/g, '')
-    .trim();
-
-  const binaryKey = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  // Step 3 — Sign the JWT.
-  const signatureBuf = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    new TextEncoder().encode(signingInput)
-  );
-
-  const jwt = signingInput + '.' + arrayBufferToBase64url(signatureBuf);
-
-  // Step 4 — Exchange the signed JWT for a short-lived access token.
-  const tokenRes = await fetchWithTimeout('https://oauth2.googleapis.com/token', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body:    'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt,
-  }, 10000);
-
-  if (!tokenRes.ok) {
-    const errText = await tokenRes.text();
-    throw new Error('Token exchange failed (' + tokenRes.status + '): ' + errText);
-  }
-
-  const tokenData = await tokenRes.json();
-  return tokenData.access_token;
-}
-
-/**
- * Encodes a UTF-8 string to base64url format (used in JWT construction).
- * @param {string} str
- * @returns {string}
- */
-function base64url(str) {
-  return btoa(str)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g,  '');
-}
-
-/**
- * Converts an ArrayBuffer to base64url using a safe byte-by-byte loop.
- * The spread operator can throw a RangeError on large buffers (such as
- * RSA signatures) — this approach avoids that risk entirely.
- * @param {ArrayBuffer} buffer
- * @returns {string}
- */
-function arrayBufferToBase64url(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary  = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g,  '');
-}
-
-/**
- * Strips leading/trailing whitespace from a URL parameter value and
- * removes any characters that are not alphanumeric, hyphens, or underscores.
- * Returns null if the input is null.
- * @param {string|null} val
- * @returns {string|null}
- */
-function sanitizeParam(val) {
-  if (val === null) return null;
-  return val.trim().replace(/[^a-zA-Z0-9\-_#]/g, '');
-}
 
 
 // ================================================================
@@ -668,21 +576,6 @@ function formatDateTime(date) {
 }
 
 /**
- * Escapes characters with special meaning in HTML to prevent XSS.
- * Must be called on every user-supplied string before HTML injection.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g,  '&amp;')
-    .replace(/</g,  '&lt;')
-    .replace(/>/g,  '&gt;')
-    .replace(/"/g,  '&quot;')
-    .replace(/'/g,  '&#39;');
-}
-
-/**
  * Renders the complete HTML page for the news display.
  * Scroll constants are injected as inline JS variables so the
  * client-side scroll logic uses the server-side configuration values.
@@ -901,9 +794,23 @@ function renderHtml(items, layout, tabName, darkBg) {
  * @param {object} env
  */
 async function runCleanup(env) {
+  var REQUIRED_CLEANUP_SECRETS = [
+    'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+    'GOOGLE_PRIVATE_KEY',
+    'GOOGLE_SHEET_ID'
+  ];
+  for (var ci = 0; ci < REQUIRED_CLEANUP_SECRETS.length; ci++) {
+    var ckey = REQUIRED_CLEANUP_SECRETS[ci];
+    if (!env[ckey]) {
+      console.error('[department-news-display] runCleanup: missing secret: ' + ckey);
+      return;
+    }
+  }
+
   const token       = await getAccessToken(
     env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    env.GOOGLE_PRIVATE_KEY
+    env.GOOGLE_PRIVATE_KEY,
+    'https://www.googleapis.com/auth/spreadsheets'
   );
   const now         = new Date();
   const thresholdMs = DELETE_EXPIRED_AFTER_DAYS * 24 * 60 * 60 * 1000;
