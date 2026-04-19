@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from './shared/fetch-helpers.js';
+import { escapeHtml, sanitizeParam } from './shared/html.js';
 
 // ================================================================
 // department-news-display — Cloudflare Worker
@@ -203,6 +204,22 @@ export default {
       ? layoutParam.toLowerCase()
       : 'split';
 
+    var REQUIRED_SECRETS = [
+      'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+      'GOOGLE_PRIVATE_KEY',
+      'GOOGLE_SHEET_ID'
+    ];
+    for (var i = 0; i < REQUIRED_SECRETS.length; i++) {
+      var key = REQUIRED_SECRETS[i];
+      if (!env[key]) {
+        console.error('[department-news-display] Missing required secret: ' + key);
+        return new Response(
+          'Configuration error: missing secret ' + key,
+          { status: 500, headers: { 'Content-Type': 'text/plain' } }
+        );
+      }
+    }
+
     try {
       // Authenticate with Google and fetch sheet data.
       const token = await getAccessToken(
@@ -393,19 +410,6 @@ function arrayBufferToBase64url(buffer) {
     .replace(/\//g, '_')
     .replace(/=/g,  '');
 }
-
-/**
- * Strips leading/trailing whitespace from a URL parameter value and
- * removes any characters that are not alphanumeric, hyphens, or underscores.
- * Returns null if the input is null.
- * @param {string|null} val
- * @returns {string|null}
- */
-function sanitizeParam(val) {
-  if (val === null) return null;
-  return val.trim().replace(/[^a-zA-Z0-9\-_#]/g, '');
-}
-
 
 // ================================================================
 // SHEET DATA FETCHING
@@ -668,21 +672,6 @@ function formatDateTime(date) {
 }
 
 /**
- * Escapes characters with special meaning in HTML to prevent XSS.
- * Must be called on every user-supplied string before HTML injection.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g,  '&amp;')
-    .replace(/</g,  '&lt;')
-    .replace(/>/g,  '&gt;')
-    .replace(/"/g,  '&quot;')
-    .replace(/'/g,  '&#39;');
-}
-
-/**
  * Renders the complete HTML page for the news display.
  * Scroll constants are injected as inline JS variables so the
  * client-side scroll logic uses the server-side configuration values.
@@ -901,6 +890,19 @@ function renderHtml(items, layout, tabName, darkBg) {
  * @param {object} env
  */
 async function runCleanup(env) {
+  var REQUIRED_CLEANUP_SECRETS = [
+    'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+    'GOOGLE_PRIVATE_KEY',
+    'GOOGLE_SHEET_ID'
+  ];
+  for (var ci = 0; ci < REQUIRED_CLEANUP_SECRETS.length; ci++) {
+    var ckey = REQUIRED_CLEANUP_SECRETS[ci];
+    if (!env[ckey]) {
+      console.error('[department-news-display] runCleanup: missing secret: ' + ckey);
+      return;
+    }
+  }
+
   const token       = await getAccessToken(
     env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     env.GOOGLE_PRIVATE_KEY
