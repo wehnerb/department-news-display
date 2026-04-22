@@ -60,7 +60,7 @@ const FONT_FAMILY = "'Segoe UI', Arial, sans-serif";
 const FONT_SIZE_TITLE = '2.6rem';
 
 /** Font size for metadata lines (Posted, Expires, Posted By). */
-const FONT_SIZE_META = '1.0rem';
+const FONT_SIZE_META = '0.8rem';
 
 /** Font size for the main news body text. */
 const FONT_SIZE_BODY = '1.3rem';
