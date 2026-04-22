@@ -63,7 +63,7 @@ const FONT_SIZE_TITLE = '3.0rem';
 const FONT_SIZE_META = '1.0rem';
 
 /** Font size for the main news body text. */
-const FONT_SIZE_BODY = '2.0rem';
+const FONT_SIZE_BODY = '1.5rem';
 
 // --- Accent color ---
 
