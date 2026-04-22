@@ -57,13 +57,13 @@ const CACHE_VERSION = 1;
 const FONT_FAMILY = "'Segoe UI', Arial, sans-serif";
 
 /** Font size for news item titles. */
-const FONT_SIZE_TITLE = '1.4rem';
+const FONT_SIZE_TITLE = '3.0rem';
 
 /** Font size for metadata lines (Posted, Expires, Posted By). */
-const FONT_SIZE_META = '0.85rem';
+const FONT_SIZE_META = '1.0rem';
 
 /** Font size for the main news body text. */
-const FONT_SIZE_BODY = '1rem';
+const FONT_SIZE_BODY = '2.0rem';
 
 // --- Accent color ---
 
