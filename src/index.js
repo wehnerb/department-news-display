@@ -96,7 +96,7 @@ const COLOR_NEW_B = 'rgba(210,210,210,0.30)';
 /** Non-recurring rows expired more than this many days ago are
  *  deleted by the daily cron job.
  *  Set to -1 to disable automatic deletion entirely. */
-const DELETE_EXPIRED_AFTER_DAYS = 7;
+const DELETE_EXPIRED_AFTER_DAYS = 14;
 
 
 // ================================================================
