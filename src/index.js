@@ -1,7 +1,8 @@
 import { fetchWithTimeout } from './shared/fetch-helpers.js';
 import { escapeHtml, sanitizeParam } from './shared/html.js';
 import { getAccessToken } from './shared/google-auth.js';
-import { DARK_BG_COLOR } from './shared/constants.js';
+import { DARK_BG_COLOR, FONT_STACK, ACCENT_COLOR, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_SUPPORTING, BORDER_SUBTLE, BORDER_STRONG, CARD_BASE, CARD_ELEVATED, CARD_HEADER, CARD_RECESSED } from './shared/colors.js';
+import { LAYOUTS } from './shared/layouts.js';
 
 // ================================================================
 // department-news-display — Cloudflare Worker
@@ -53,9 +54,6 @@ const CACHE_VERSION = 1;
 
 // --- Font configuration ---
 
-/** Font family applied to all text on the display. */
-const FONT_FAMILY = "'Segoe UI', Arial, sans-serif";
-
 /** Font size for news item titles. */
 const FONT_SIZE_TITLE = '2.6rem';
 
@@ -64,12 +62,6 @@ const FONT_SIZE_META = '0.8rem';
 
 /** Font size for the main news body text. */
 const FONT_SIZE_BODY = '1.3rem';
-
-// --- Accent color ---
-
-/** FFD brand red — used as a left border stripe on new items and
- *  as a title underline on regular items. */
-const ACCENT_COLOR = '#C8102E';
 
 // --- Card color configuration ---
 // Regular (non-new) items alternate between these two backgrounds.
@@ -173,11 +165,11 @@ export default {
         '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
         'html, body { width: 100vw; height: 100vh; overflow: hidden;' +
         '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
-        '  font-family: "Segoe UI", Arial, Helvetica, sans-serif;' +
+        '  font-family: ' + FONT_STACK + ';' +
         '  display: flex; align-items: center; justify-content: center; }' +
         '.err-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 5vw; }' +
-        '.err-title { font-size: 1.8rem; font-weight: 700; color: #C8102E; letter-spacing: 0.06em; }' +
-        '.err-sub   { font-size: 1.1rem; color: rgba(255,255,255,0.92); }' +
+        '.err-title { font-size: 1.8rem; font-weight: 700; color: ' + ACCENT_COLOR + '; letter-spacing: 0.06em; }' +
+        '.err-sub   { font-size: 1.1rem; color: ' + TEXT_PRIMARY + '; }' +
         '</style></head>' +
         '<body>' +
         '<div class="err-wrap">' +
@@ -212,13 +204,13 @@ export default {
           'html,body{' +
           '  width:100vw;height:100vh;overflow:hidden;' +
           '  background:' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
-          '  font-family:"Segoe UI",Arial,Helvetica,sans-serif;' +
+          '  font-family:' + FONT_STACK + ';' +
           '  display:flex;align-items:center;justify-content:center;}' +
           '.err-wrap{display:flex;flex-direction:column;align-items:center;' +
           '  gap:8px;text-align:center;padding:0 5vw;}' +
-          '.err-title{font-size:1.8rem;font-weight:700;color:#C8102E;' +
+          '.err-title{font-size:1.8rem;font-weight:700;color:' + ACCENT_COLOR + ';' +
           '  letter-spacing:0.06em;}' +
-          '.err-sub{font-size:1.1rem;color:rgba(255,255,255,0.92);}' +
+          '.err-sub{font-size:1.1rem;color:' + TEXT_PRIMARY + ';}' +
           '</style></head><body>' +
           '<div class="err-wrap">' +
           '<div class="err-title">CONFIGURATION ERROR</div>' +
@@ -275,12 +267,12 @@ export default {
         'html, body {' +
         '  width: 100vw; height: 100vh; overflow: hidden;' +
         '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
-        '  font-family: "Segoe UI", Arial, Helvetica, sans-serif;' +
+        '  font-family: ' + FONT_STACK + ';' +
         '  display: flex; align-items: center; justify-content: center;' +
         '}' +
         '.err-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 5vw; }' +
-        '.err-title { font-size: 1.8rem; font-weight: 700; color: #C8102E; letter-spacing: 0.06em; }' +
-        '.err-sub   { font-size: 1.1rem; color: rgba(255,255,255,0.92); }' +
+        '.err-title { font-size: 1.8rem; font-weight: 700; color: ' + ACCENT_COLOR + '; letter-spacing: 0.06em; }' +
+        '.err-sub   { font-size: 1.1rem; color: ' + TEXT_PRIMARY + '; }' +
         '</style>' +
         '</head>' +
         '<body>' +
@@ -609,9 +601,9 @@ function renderHtml(items, layout, tabName, darkBg) {
           // subtle white border. Left padding is reduced by 3px to compensate
           // for the wider border so body text stays visually aligned.
           cardStyle = 'background:' + bgColor + ';' +
-                      'border-top:1px solid rgba(255,255,255,0.10);' +
-                      'border-right:1px solid rgba(255,255,255,0.10);' +
-                      'border-bottom:1px solid rgba(255,255,255,0.10);' +
+                      'border-top:1px solid ' + BORDER_SUBTLE + ';' +
+                      'border-right:1px solid ' + BORDER_SUBTLE + ';' +
+                      'border-bottom:1px solid ' + BORDER_SUBTLE + ';' +
                       'border-left:4px solid ' + ACCENT_COLOR + ';' +
                       'padding-left:calc(1rem - 3px);';
           titleDivider = '';
@@ -620,7 +612,7 @@ function renderHtml(items, layout, tabName, darkBg) {
           // Regular items: alternating subtle backgrounds + red title underline.
           bgColor      = (regularCount % 2 === 0) ? COLOR_REGULAR_A : COLOR_REGULAR_B;
           cardStyle    = 'background:' + bgColor + ';' +
-                         'border:1px solid rgba(255,255,255,0.10);';
+                         'border:1px solid ' + BORDER_SUBTLE + ';';
           // Thin red line beneath the title, matching the probationary display
           // divider style. Width is 60% to feel proportional without spanning
           // the full card.
@@ -691,7 +683,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     'body {' +
     '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
     '  color: #f0f0f0;' +
-    '  font-family: ' + FONT_FAMILY + ';' +
+    '  font-family: ' + FONT_STACK + ';' +
     '  font-size: '   + FONT_SIZE_BODY + ';' +
     '  padding: 0.75rem;' +
     '  overflow-x: hidden;' +
@@ -749,7 +741,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     // Metadata block — Posted, Expires, Posted By each on their own line.
     '.card-meta {' +
     '  font-size: ' + FONT_SIZE_META + ';' +
-    '  color: rgba(255,255,255,0.68);' +
+    '  color: ' + TEXT_SECONDARY + ';' +
     '  line-height: 1.6;' +
     '  margin-bottom: 0.65rem;' +
     '}' +
@@ -757,7 +749,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     // Body text — preserves line breaks entered in the sheet.
     '.card-body {' +
     '  font-size: ' + FONT_SIZE_BODY + ';' +
-    '  color: rgba(255,255,255,0.92);' +
+    '  color: ' + TEXT_PRIMARY + ';' +
     '  line-height: 1.55;' +
     '}';
 
