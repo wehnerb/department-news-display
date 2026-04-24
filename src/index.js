@@ -644,7 +644,7 @@ function renderHtml(items, layout, tabName, darkBg) {
                       'border-top:1px solid ' + BORDER_SUBTLE + ';' +
                       'border-right:1px solid ' + BORDER_SUBTLE + ';' +
                       'border-bottom:1px solid ' + BORDER_SUBTLE + ';' +
-                      'border-left:4px solid ' + ACCENT_COLOR + ';' +
+                      'border-left:1px solid ' + BORDER_SUBTLE + ';' +
                       'padding-left:calc(1rem - 3px);';
           titleDivider = '';
           newCount++;
@@ -690,8 +690,10 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  var MIN_SPEED                = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  window.addEventListener("load", function () {' +
-    '    var totalH = document.documentElement.scrollHeight;' +
-    '    var viewH  = window.innerHeight;' +
+    '    var el      = document.getElementById("scroller");' +
+    '    if (!el) return;' +
+    '    var totalH  = el.scrollHeight;' +
+    '    var viewH   = el.clientHeight;' +
     '    if (totalH <= viewH) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
@@ -708,8 +710,8 @@ function renderHtml(items, layout, tabName, darkBg) {
     '        pauseElapsed += delta;' +
     '        if (pauseElapsed >= SCROLL_PAUSE_SECONDS) { scrollStarted = true; }' +
     '      } else {' +
-    '        window.scrollBy(0, speed * delta);' +
-    '        if (window.scrollY + viewH >= totalH) { return; }' +
+    '        el.scrollTop += speed * delta;' +
+    '        if (el.scrollTop + viewH >= totalH) { return; }' +
     '      }' +
     '      requestAnimationFrame(step);' +
     '    }' +
@@ -727,6 +729,11 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  font-size: '   + FONT_SIZE_BODY + ';' +
     '  padding: 0.75rem;' +
     '  overflow-x: hidden;' +
+    '}' +
+
+    '#scroller {' +
+    '  height: 100vh;' +
+    '  overflow: hidden;' +
     '}' +
 
     '.no-news {' +
