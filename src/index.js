@@ -26,7 +26,7 @@ import { LAYOUTS } from './shared/layouts.js';
 
 /** Total seconds the news slide is shown on the display.
  *  Scroll speed is calculated from this value. */
-const DISPLAY_DURATION_SECONDS = 60;
+const DISPLAY_DURATION_SECONDS = 30;
 
 /** Items are highlighted as "new" if their posted date (or the
  *  start of the current recurrence cycle) is within this many days. */
