@@ -690,25 +690,17 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  var MIN_SPEED                = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  function initScroll() {' +
-    '    var el     = document.getElementById("scroller");' +
-    '    if (!el) { console.log("scroll: #scroller not found"); return; }' +
-    '    var viewH  = el.clientHeight || window.innerHeight;' +
-    '    var totalH = el.scrollHeight;' +
-    '    console.log("scroll: el.clientHeight=" + el.clientHeight +' +
-    '      " window.innerHeight=" + window.innerHeight +' +
-    '      " el.scrollHeight=" + el.scrollHeight +' +
-    '      " totalH=" + totalH + " viewH=" + viewH);' +
-    '    if (totalH <= viewH) {' +
-    '      console.log("scroll: no overflow — not scrolling");' +
-    '      return;' +
-    '    }' +
-    '    console.log("scroll: starting animation speed=" +' +
-    '      Math.min(MAX_SPEED, Math.max(MIN_SPEED, (totalH - viewH) /' +
-    '      Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS))));' +
+    '    var outer = document.getElementById("scroller");' +
+    '    var inner = document.getElementById("scroll-inner");' +
+    '    if (!outer || !inner) return;' +
+    '    var viewH  = outer.clientHeight || window.innerHeight;' +
+    '    var totalH = inner.offsetHeight;' +
+    '    if (totalH <= viewH) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
     '    var rawSpeed      = overflow / availableTime;' +
     '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, rawSpeed));' +
+    '    var translated    = 0;' +
     '    var pauseElapsed  = 0;' +
     '    var scrollStarted = false;' +
     '    var lastTimestamp = null;' +
@@ -720,11 +712,9 @@ function renderHtml(items, layout, tabName, darkBg) {
     '        pauseElapsed += delta;' +
     '        if (pauseElapsed >= SCROLL_PAUSE_SECONDS) { scrollStarted = true; }' +
     '      } else {' +
-    '        el.scrollTop += speed * delta;' +
-    '        if (el.scrollTop + viewH >= totalH) {' +
-    '          console.log("scroll: reached end scrollTop=" + el.scrollTop);' +
-    '          return;' +
-    '        }' +
+    '        translated += speed * delta;' +
+    '        if (translated >= overflow) { translated = overflow; return; }' +
+    '        inner.style.transform = "translateY(-" + translated + "px)";' +
     '      }' +
     '      requestAnimationFrame(step);' +
     '    }' +
@@ -756,6 +746,10 @@ function renderHtml(items, layout, tabName, darkBg) {
     '#scroller {' +
     '  height: 100%;' +
     '  overflow: hidden;' +
+    '}' +
+
+    '#scroll-inner {' +
+    '  will-change: transform;' +
     '}' +
 
     '.no-news {' +
@@ -833,7 +827,9 @@ function renderHtml(items, layout, tabName, darkBg) {
     '</head>' +
     '<body>' +
     '<div id="scroller">' +
+    '<div id="scroll-inner">' +
     cardsHtml +
+    '</div>' +
     '</div>' +
     '<script>' + scrollScript + '</script>' +
     '</body>' +
