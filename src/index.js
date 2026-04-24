@@ -689,11 +689,11 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  var SCROLL_PAUSE_SECONDS     = ' + SCROLL_PAUSE_SECONDS     + ';' +
     '  var MIN_SPEED                = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
-    '  window.addEventListener("load", function () {' +
-    '    var el      = document.getElementById("scroller");' +
+    '  function initScroll() {' +
+    '    var el     = document.getElementById("scroller");' +
     '    if (!el) return;' +
-    '    var totalH  = el.scrollHeight;' +
-    '    var viewH   = el.clientHeight;' +
+    '    var viewH  = el.clientHeight || window.innerHeight;' +
+    '    var totalH = el.scrollHeight;' +
     '    if (totalH <= viewH) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
@@ -716,7 +716,14 @@ function renderHtml(items, layout, tabName, darkBg) {
     '      requestAnimationFrame(step);' +
     '    }' +
     '    requestAnimationFrame(step);' +
-    '  });' +
+    '  }' +
+    '  if (document.readyState === "complete") {' +
+    '    setTimeout(initScroll, 100);' +
+    '  } else {' +
+    '    window.addEventListener("load", function () {' +
+    '      setTimeout(initScroll, 100);' +
+    '    });' +
+    '  }' +
     '}());';
 
   const css =
