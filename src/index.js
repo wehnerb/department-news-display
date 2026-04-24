@@ -470,7 +470,7 @@ function processRows(rows, now) {
       // Check the current cycle and the one before it to handle boundary
       // cases where 'now' sits right on a cycle edge.
       let foundActive = false;
-      for (let n = Math.max(0, cyclesPassed); n >= Math.max(0, cyclesPassed - 1); n--) {
+      for (let n = (0, cyclesPassed); n >= (0, cyclesPassed - 1); n--) {
         const cyclePosted  = new Date(originalPosted.getTime() + n * intervalMs);
         const cycleExpires = new Date(cyclePosted.getTime() + cycleDurationMs);
 
@@ -702,7 +702,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
     '    var rawSpeed      = overflow / availableTime;' +
-    '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, rawSpeed));' +
+    '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - (2 * SCROLL_PAUSE_SECONDS));' +
     '    var translated    = 0;' +
     '    var pauseElapsed  = 0;' +
     '    var bottomElapsed = 0;' +
