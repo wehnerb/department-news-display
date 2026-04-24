@@ -26,7 +26,7 @@ import { LAYOUTS } from './shared/layouts.js';
 
 /** Total seconds the news slide is shown on the display.
  *  Scroll speed is calculated from this value. */
-const DISPLAY_DURATION_SECONDS = 60;
+const DISPLAY_DURATION_SECONDS = 30;
 
 /** Items are highlighted as "new" if their posted date (or the
  *  start of the current recurrence cycle) is within this many days. */
@@ -470,7 +470,7 @@ function processRows(rows, now) {
       // Check the current cycle and the one before it to handle boundary
       // cases where 'now' sits right on a cycle edge.
       let foundActive = false;
-      for (let n = Math.max(0, cyclesPassed); n >= Math.max(0, cyclesPassed - 1); n--) {
+      for (let n = (0, cyclesPassed); n >= (0, cyclesPassed - 1); n--) {
         const cyclePosted  = new Date(originalPosted.getTime() + n * intervalMs);
         const cycleExpires = new Date(cyclePosted.getTime() + cycleDurationMs);
 
@@ -700,7 +700,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    var totalH = inner.offsetHeight;' +
     '    if (totalH <= viewH + 2) return;' +
     '    var overflow      = totalH - viewH;' +
-    '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
+    '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - (2 * SCROLL_PAUSE_SECONDS));' +
     '    var rawSpeed      = overflow / availableTime;' +
     '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, rawSpeed));' +
     '    var translated    = 0;' +
