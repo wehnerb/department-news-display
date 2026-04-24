@@ -721,6 +721,7 @@ function renderHtml(items, layout, tabName, darkBg) {
 
   const css =
     '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
+    'html { overflow: hidden; }' +
 
     'body {' +
     '  background: ' + (darkBg ? DARK_BG_COLOR : 'transparent') + ';' +
@@ -728,11 +729,12 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  font-family: ' + FONT_STACK + ';' +
     '  font-size: '   + FONT_SIZE_BODY + ';' +
     '  padding: 0.75rem;' +
-    '  overflow-x: hidden;' +
+    '  height: 100vh;' +
+    '  overflow: hidden;' +
     '}' +
 
     '#scroller {' +
-    '  height: 100vh;' +
+    '  height: 100%;' +
     '  overflow: hidden;' +
     '}' +
 
