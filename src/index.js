@@ -702,19 +702,34 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, rawSpeed));' +
     '    var translated    = 0;' +
     '    var pauseElapsed  = 0;' +
-    '    var scrollStarted = false;' +
+    '    var bottomElapsed = 0;' +
+    '    var phase         = "pause-top";' +
     '    var lastTimestamp = null;' +
     '    function step(timestamp) {' +
     '      if (lastTimestamp === null) { lastTimestamp = timestamp; }' +
     '      var delta = (timestamp - lastTimestamp) / 1000;' +
     '      lastTimestamp = timestamp;' +
-    '      if (!scrollStarted) {' +
+    '      if (phase === "pause-top") {' +
     '        pauseElapsed += delta;' +
-    '        if (pauseElapsed >= SCROLL_PAUSE_SECONDS) { scrollStarted = true; }' +
-    '      } else {' +
+    '        if (pauseElapsed >= SCROLL_PAUSE_SECONDS) { phase = "scroll-down"; }' +
+    '      } else if (phase === "scroll-down") {' +
     '        translated += speed * delta;' +
-    '        if (translated >= overflow) { translated = overflow; return; }' +
-    '        inner.style.transform = "translateY(-" + translated + "px)";' +
+    '        if (translated >= overflow) {' +
+    '          translated = overflow;' +
+    '          inner.style.transform = "translateY(-" + translated + "px)";' +
+    '          phase = "pause-bottom";' +
+    '          bottomElapsed = 0;' +
+    '        } else {' +
+    '          inner.style.transform = "translateY(-" + translated + "px)";' +
+    '        }' +
+    '      } else if (phase === "pause-bottom") {' +
+    '        bottomElapsed += delta;' +
+    '        if (bottomElapsed >= SCROLL_PAUSE_SECONDS) {' +
+    '          translated = 0;' +
+    '          inner.style.transform = "translateY(0px)";' +
+    '          pauseElapsed = 0;' +
+    '          phase = "pause-top";' +
+    '        }' +
     '      }' +
     '      requestAnimationFrame(step);' +
     '    }' +
