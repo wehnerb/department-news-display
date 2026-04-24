@@ -691,10 +691,20 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  function initScroll() {' +
     '    var el     = document.getElementById("scroller");' +
-    '    if (!el) return;' +
+    '    if (!el) { console.log("scroll: #scroller not found"); return; }' +
     '    var viewH  = el.clientHeight || window.innerHeight;' +
     '    var totalH = el.scrollHeight;' +
-    '    if (totalH <= viewH) return;' +
+    '    console.log("scroll: el.clientHeight=" + el.clientHeight +' +
+    '      " window.innerHeight=" + window.innerHeight +' +
+    '      " el.scrollHeight=" + el.scrollHeight +' +
+    '      " totalH=" + totalH + " viewH=" + viewH);' +
+    '    if (totalH <= viewH) {' +
+    '      console.log("scroll: no overflow — not scrolling");' +
+    '      return;' +
+    '    }' +
+    '    console.log("scroll: starting animation speed=" +' +
+    '      Math.min(MAX_SPEED, Math.max(MIN_SPEED, (totalH - viewH) /' +
+    '      Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS))));' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
     '    var rawSpeed      = overflow / availableTime;' +
@@ -711,7 +721,10 @@ function renderHtml(items, layout, tabName, darkBg) {
     '        if (pauseElapsed >= SCROLL_PAUSE_SECONDS) { scrollStarted = true; }' +
     '      } else {' +
     '        el.scrollTop += speed * delta;' +
-    '        if (el.scrollTop + viewH >= totalH) { return; }' +
+    '        if (el.scrollTop + viewH >= totalH) {' +
+    '          console.log("scroll: reached end scrollTop=" + el.scrollTop);' +
+    '          return;' +
+    '        }' +
     '      }' +
     '      requestAnimationFrame(step);' +
     '    }' +
