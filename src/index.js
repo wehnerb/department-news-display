@@ -695,7 +695,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    if (!outer || !inner) return;' +
     '    var viewH  = outer.clientHeight || window.innerHeight;' +
     '    var totalH = inner.offsetHeight;' +
-    '    if (totalH <= viewH) return;' +
+    '    if (totalH <= viewH + 2) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - SCROLL_PAUSE_SECONDS);' +
     '    var rawSpeed      = overflow / availableTime;' +
