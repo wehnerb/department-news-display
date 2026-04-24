@@ -529,11 +529,14 @@ function parseSheetDateTime(raw) {
   // technique from calendar-display's parseLocalDateTimeInZone — avoids the
   // bug where new Date("4/18/2026 3:00 PM") is treated as UTC by the
   // Cloudflare Workers runtime (which runs on UTC hosts).
-  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
   if (m) {
     var mo   = parseInt(m[1], 10);
     var dy   = parseInt(m[2], 10);
     var yr   = parseInt(m[3], 10);
+    // Normalize 2-digit years: 00-49 → 2000-2049, 50-99 → 1950-1999.
+    // This matches the convention used by most spreadsheet applications.
+    if (yr < 100) { yr = yr < 50 ? 2000 + yr : 1900 + yr; }
     var hr   = parseInt(m[4], 10);
     var mn   = parseInt(m[5], 10);
     var ampm = m[6] ? m[6].toUpperCase() : null;
