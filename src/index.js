@@ -710,7 +710,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    var lastTimestamp = null;' +
     '    function step(timestamp) {' +
     '      if (lastTimestamp === null) { lastTimestamp = timestamp; }' +
-    '      var delta = (timestamp - lastTimestamp) / 1000;' +
+    '      var delta = Math.min((timestamp - lastTimestamp) / 1000, 0.1);' +
     '      lastTimestamp = timestamp;' +
     '      if (phase === "pause-top") {' +
     '        pauseElapsed += delta;' +
