@@ -26,7 +26,7 @@ import { LAYOUTS } from './shared/layouts.js';
 
 /** Total seconds the news slide is shown on the display.
  *  Scroll speed is calculated from this value. */
-const DISPLAY_DURATION_SECONDS = 30;
+const DISPLAY_DURATION_SECONDS = 20;
 
 /** Items are highlighted as "new" if their posted date (or the
  *  start of the current recurrence cycle) is within this many days. */
@@ -34,7 +34,7 @@ const NEW_ITEM_THRESHOLD_DAYS = 3;
 
 /** Seconds to pause before auto-scroll begins, giving viewers
  *  time to start reading before the content starts moving. */
-const SCROLL_PAUSE_SECONDS = 5;
+const SCROLL_PAUSE_SECONDS = 3;
 
 /** Slowest allowed scroll speed in pixels per second.
  *  Prevents content from scrolling too slowly to finish in time. */
