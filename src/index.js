@@ -63,6 +63,16 @@ const FONT_SIZE_META = '0.8rem';
 /** Font size for the main news body text. */
 const FONT_SIZE_BODY = '1.3rem';
 
+// Line height for the card body text (news item content).
+// 1.55 = current default. Increase for more breathing room between lines,
+// decrease to fit more content per card. Applies to all body text including
+// items with line breaks entered in the sheet.
+const CARD_BODY_LINE_HEIGHT = 1.55;
+
+// Line height for the card metadata block (Posted, Expires, Posted By).
+// 1.6 = current default. Adjust alongside CARD_BODY_LINE_HEIGHT if needed.
+const CARD_META_LINE_HEIGHT = 1.6;
+
 // --- Card color configuration ---
 // Regular (non-new) items alternate between these two backgrounds.
 // Both are subtle dark tints to visually separate cards against
@@ -823,7 +833,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '.card-meta {' +
     '  font-size: ' + FONT_SIZE_META + ';' +
     '  color: ' + TEXT_SECONDARY + ';' +
-    '  line-height: 1.6;' +
+    '  line-height: ' + CARD_META_LINE_HEIGHT + ';' +
     '  margin-bottom: 0.65rem;' +
     '}' +
 
@@ -831,7 +841,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '.card-body {' +
     '  font-size: ' + FONT_SIZE_BODY + ';' +
     '  color: ' + TEXT_PRIMARY + ';' +
-    '  line-height: 1.55;' +
+    '  line-height: ' + CARD_BODY_LINE_HEIGHT + ';' +
     '}';
 
   return (
