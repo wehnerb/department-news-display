@@ -706,6 +706,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    var outer = document.getElementById("scroller");' +
     '    var inner = document.getElementById("scroll-inner");' +
     '    if (!outer || !inner) return;' +
+    '    if (inner.dataset.noScroll) return;' +
     '    var viewH  = outer.clientHeight || window.innerHeight;' +
     '    var totalH = inner.offsetHeight;' +
     '    if (totalH <= viewH + 2) return;' +
@@ -855,7 +856,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '</head>' +
     '<body>' +
     '<div id="scroller">' +
-    '<div id="scroll-inner">' +
+    '<div id="scroll-inner"' + (items.length === 0 ? ' data-no-scroll="1"' : '') + '>' +
     cardsHtml +
     '</div>' +
     '</div>' +
