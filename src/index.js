@@ -67,7 +67,7 @@ const FONT_SIZE_BODY = '1.3rem';
 // 1.55 = current default. Increase for more breathing room between lines,
 // decrease to fit more content per card. Applies to all body text including
 // items with line breaks entered in the sheet.
-const CARD_BODY_LINE_HEIGHT = 1.55;
+const CARD_BODY_LINE_HEIGHT = 1.25;
 
 // Line height for the card metadata block (Posted, Expires, Posted By).
 // 1.6 = current default. Adjust alongside CARD_BODY_LINE_HEIGHT if needed.
