@@ -150,9 +150,13 @@ export default {
    */
   async fetch(request, env) {
 
-    // Reject non-GET requests with a generic status to reduce attack surface.
-    if (request.method !== 'GET') {
-      return new Response('Method not allowed', { status: 405 });
+    // Allow GET and HEAD (HEAD is used by UptimeRobot health monitoring).
+    // All other methods are rejected to reduce attack surface.
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('Method not allowed', {
+        status: 405,
+        headers: { 'Allow': 'GET, HEAD' },
+      });
     }
 
     const url          = new URL(request.url);
@@ -182,10 +186,12 @@ export default {
         healthDetail = 'google-apis: unreachable (' + (e && e.message ? e.message : String(e)) + ')';
       }
 
-      return new Response(
+      const healthBody =
         'status: ' + healthStatus + '\n' +
         'worker: department-news-display\n' +
-        healthDetail + '\n',
+        healthDetail + '\n';
+      return new Response(
+        request.method === 'HEAD' ? null : healthBody,
         {
           status: healthStatus === 'healthy' ? 200 : 503,
           headers: {
