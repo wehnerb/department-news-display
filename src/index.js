@@ -702,13 +702,18 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  var SCROLL_PAUSE_SECONDS     = ' + SCROLL_PAUSE_SECONDS     + ';' +
     '  var MIN_SPEED                = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
-    '  function initScroll() {' +
+    '  function initScroll(attempt) {' +
+    '    attempt = attempt || 0;' +
     '    var outer = document.getElementById("scroller");' +
     '    var inner = document.getElementById("scroll-inner");' +
     '    if (!outer || !inner) return;' +
     '    if (inner.dataset.noScroll) return;' +
     '    var viewH  = outer.clientHeight || window.innerHeight;' +
     '    var totalH = inner.offsetHeight;' +
+    '    if ((viewH === 0 || totalH === 0) && attempt < 10) {' +
+    '      setTimeout(function() { initScroll(attempt + 1); }, 100);' +
+    '      return;' +
+    '    }' +
     '    if (totalH <= viewH + 2) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - (2 * SCROLL_PAUSE_SECONDS));' +
@@ -750,10 +755,10 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    requestAnimationFrame(step);' +
     '  }' +
     '  if (document.readyState === "complete") {' +
-    '    setTimeout(initScroll, 100);' +
+    '    setTimeout(initScroll, 500);' +
     '  } else {' +
     '    window.addEventListener("load", function () {' +
-    '      setTimeout(initScroll, 100);' +
+    '      setTimeout(initScroll, 500);' +
     '    });' +
     '  }' +
     '}());';
