@@ -710,7 +710,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '    if (inner.dataset.noScroll) return;' +
     '    var viewH  = outer.clientHeight || window.innerHeight;' +
     '    var totalH = inner.offsetHeight;' +
-    '    if ((viewH === 0 || totalH === 0) && attempt < 10) {' +
+    '    if ((viewH === 0 || totalH === 0) && attempt < 20) {' +
     '      setTimeout(function() { initScroll(attempt + 1); }, 100);' +
     '      return;' +
     '    }' +
