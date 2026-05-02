@@ -67,7 +67,7 @@ const FONT_SIZE_BODY = '1.3rem';
 // 1.55 = current default. Increase for more breathing room between lines,
 // decrease to fit more content per card. Applies to all body text including
 // items with line breaks entered in the sheet.
-const CARD_BODY_LINE_HEIGHT = 1.55;
+const CARD_BODY_LINE_HEIGHT = 1.25;
 
 // Line height for the card metadata block (Posted, Expires, Posted By).
 // 1.6 = current default. Adjust alongside CARD_BODY_LINE_HEIGHT if needed.
@@ -150,9 +150,13 @@ export default {
    */
   async fetch(request, env) {
 
-    // Reject non-GET requests with a generic status to reduce attack surface.
-    if (request.method !== 'GET') {
-      return new Response('Method not allowed', { status: 405 });
+    // Allow GET and HEAD (HEAD is used by UptimeRobot health monitoring).
+    // All other methods are rejected to reduce attack surface.
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('Method not allowed', {
+        status: 405,
+        headers: { 'Allow': 'GET, HEAD' },
+      });
     }
 
     const url          = new URL(request.url);
@@ -182,10 +186,12 @@ export default {
         healthDetail = 'google-apis: unreachable (' + (e && e.message ? e.message : String(e)) + ')';
       }
 
-      return new Response(
+      const healthBody =
         'status: ' + healthStatus + '\n' +
         'worker: department-news-display\n' +
-        healthDetail + '\n',
+        healthDetail + '\n';
+      return new Response(
+        request.method === 'HEAD' ? null : healthBody,
         {
           status: healthStatus === 'healthy' ? 200 : 503,
           headers: {
@@ -702,57 +708,45 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  var SCROLL_PAUSE_SECONDS     = ' + SCROLL_PAUSE_SECONDS     + ';' +
     '  var MIN_SPEED                = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
-    '  function initScroll() {' +
+    '  function initScroll(attempt) {' +
+    '    attempt = attempt || 0;' +
     '    var outer = document.getElementById("scroller");' +
     '    var inner = document.getElementById("scroll-inner");' +
     '    if (!outer || !inner) return;' +
+    '    if (inner.dataset.noScroll) return;' +
     '    var viewH  = outer.clientHeight || window.innerHeight;' +
     '    var totalH = inner.offsetHeight;' +
+    '    if ((viewH === 0 || totalH === 0) && attempt < 20) {' +
+    '      setTimeout(function() { initScroll(attempt + 1); }, 100);' +
+    '      return;' +
+    '    }' +
     '    if (totalH <= viewH + 2) return;' +
     '    var overflow      = totalH - viewH;' +
     '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - (2 * SCROLL_PAUSE_SECONDS));' +
     '    var rawSpeed      = overflow / availableTime;' +
     '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, rawSpeed));' +
-    '    var translated    = 0;' +
-    '    var pauseElapsed  = 0;' +
-    '    var bottomElapsed = 0;' +
-    '    var phase         = "pause-top";' +
-    '    var lastTimestamp = null;' +
-    '    function step(timestamp) {' +
-    '      if (lastTimestamp === null) { lastTimestamp = timestamp; }' +
-    '      var delta = Math.min((timestamp - lastTimestamp) / 1000, 0.1);' +
-    '      lastTimestamp = timestamp;' +
-    '      if (phase === "pause-top") {' +
-    '        pauseElapsed += delta;' +
-    '        if (pauseElapsed >= SCROLL_PAUSE_SECONDS) { phase = "scroll-down"; }' +
-    '      } else if (phase === "scroll-down") {' +
-    '        translated += speed * delta;' +
-    '        if (translated >= overflow) {' +
-    '          translated = overflow;' +
-    '          inner.style.transform = "translateY(-" + translated + "px)";' +
-    '          phase = "pause-bottom";' +
-    '          bottomElapsed = 0;' +
-    '        } else {' +
-    '          inner.style.transform = "translateY(-" + translated + "px)";' +
-    '        }' +
-    '      } else if (phase === "pause-bottom") {' +
-    '        bottomElapsed += delta;' +
-    '        if (bottomElapsed >= SCROLL_PAUSE_SECONDS) {' +
-    '          translated = 0;' +
-    '          inner.style.transform = "translateY(0px)";' +
-    '          pauseElapsed = 0;' +
-    '          phase = "pause-top";' +
-    '        }' +
-    '      }' +
-    '      requestAnimationFrame(step);' +
-    '    }' +
-    '    requestAnimationFrame(step);' +
+    '    var actualScrollTime = overflow / speed;' +
+    '    var totalDuration    = SCROLL_PAUSE_SECONDS + actualScrollTime + SCROLL_PAUSE_SECONDS;' +
+    '    var pauseTopPct      = (SCROLL_PAUSE_SECONDS / totalDuration) * 100;' +
+    '    var pauseBottomPct   = 100 - ((SCROLL_PAUSE_SECONDS / totalDuration) * 100);' +
+    '    var animationName    = "ffd-scroll-" + Date.now();' +
+    '    var keyframes =' +
+    '      "@keyframes " + animationName + " {" +' +
+    '        "0% { transform: translateY(0); }" +' +
+    '        pauseTopPct.toFixed(2) + "% { transform: translateY(0); }" +' +
+    '        pauseBottomPct.toFixed(2) + "% { transform: translateY(-" + overflow + "px); }" +' +
+    '        "100% { transform: translateY(-" + overflow + "px); }" +' +
+    '      "}";' +
+    '    var styleEl = document.createElement("style");' +
+    '    styleEl.textContent = keyframes;' +
+    '    document.head.appendChild(styleEl);' +
+    '    inner.style.animation = animationName + " " + totalDuration + "s linear infinite";' +
     '  }' +
     '  if (document.readyState === "complete") {' +
-    '    setTimeout(initScroll, 100);' +
+    '    setTimeout(initScroll, 500);' +
     '  } else {' +
     '    window.addEventListener("load", function () {' +
-    '      setTimeout(initScroll, 100);' +
+    '      setTimeout(initScroll, 500);' +
     '    });' +
     '  }' +
     '}());';
@@ -855,7 +849,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '</head>' +
     '<body>' +
     '<div id="scroller">' +
-    '<div id="scroll-inner">' +
+    '<div id="scroll-inner"' + (items.length === 0 ? ' data-no-scroll="1"' : '') + '>' +
     cardsHtml +
     '</div>' +
     '</div>' +
