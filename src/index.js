@@ -761,6 +761,11 @@ function renderHtml(items, layout, tabName, darkBg) {
     '      setTimeout(initScroll, 500);' +
     '    });' +
     '  }' +
+    '  document.addEventListener("visibilitychange", function() {' +
+    '    if (document.visibilityState === "visible") {' +
+    '      window.location.reload();' +
+    '    }' +
+    '  });' +
     '}());';
 
   const css =
