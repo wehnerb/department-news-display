@@ -17,7 +17,7 @@ const SCROLL_PAUSE_SECONDS = 5;
 const MIN_SCROLL_SPEED_PX_PER_SEC = 20;
 
 /** Maximum allowed scroll speed.[cite: 3] */
-const MAX_SCROLL_SPEED_PX_PER_SEC = 100;
+const MAX_SCROLL_SPEED_PX_PER_SEC = 75;
 
 const CACHE_SECONDS = 300;
 const CACHE_VERSION = 2;
