@@ -61,7 +61,7 @@ const FONT_SIZE_TITLE = '2.6rem';
 const FONT_SIZE_META = '0.8rem';
 
 /** Font size for the main news body text. */
-const FONT_SIZE_BODY = '1.3rem';
+const FONT_SIZE_BODY = '1.4rem';
 
 // Line height for the card body text (news item content).
 // Increase for more breathing room between lines,
