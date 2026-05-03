@@ -59,9 +59,39 @@ const VALID_LAYOUTS = ['split', 'wide', 'full', 'tri'];
 
 export default {
   async fetch(request, env) {
-    if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
+     if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('Method not allowed', {
+        status: 405,
+        headers: { 'Allow': 'GET, HEAD' },
+      });
+    }
 
     const url = new URL(request.url);
+     if (url.pathname === '/healthz') {
+      const method = request.method.toUpperCase();
+      let healthStatus = 'healthy';
+      const details = [];
+      const hasSheetId = !!(env.GOOGLE_SHEET_ID);
+      const hasEmail   = !!(env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+      const hasKey     = !!(env.GOOGLE_PRIVATE_KEY);
+      if (!hasSheetId) { healthStatus = 'degraded'; details.push('GOOGLE_SHEET_ID: not configured'); }
+      if (!hasEmail)   { healthStatus = 'degraded'; details.push('GOOGLE_SERVICE_ACCOUNT_EMAIL: not configured'); }
+      if (!hasKey)     { healthStatus = 'degraded'; details.push('GOOGLE_PRIVATE_KEY: not configured'); }
+      const healthBody =
+        'status: ' + healthStatus + '\n' +
+        'worker: department-news-display\n' +
+        (details.length ? details.join('\n') + '\n' : '');
+      return new Response(
+        method === 'HEAD' ? null : healthBody,
+        {
+          status: healthStatus === 'healthy' ? 200 : 503,
+          headers: {
+            'Content-Type':  'text/plain; charset=UTF-8',
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
+    }
     const stationParam = sanitizeParam(url.searchParams.get('station')) || '';
     const layoutParam  = sanitizeParam(url.searchParams.get('layout'))  || 'split';
     const darkBg = sanitizeParam(url.searchParams.get('bg')) === 'dark';
