@@ -28,6 +28,18 @@ import { LAYOUTS } from './shared/layouts.js';
  *  Scroll speed is calculated from this value. */
 const DISPLAY_DURATION_SECONDS = 20;
 
+// Minimum seconds any single page is shown before flipping.
+// Prevents pages from advancing too quickly to read when there
+// are many pages within a short DISPLAY_DURATION_SECONDS window.
+const MIN_PAGE_HOLD_SECONDS = 5;
+
+// Average character width as a fraction of font size (em units).
+// Used to estimate how many characters fit per line of body text.
+// 0.5 is appropriate for proportional sans-serif fonts like Segoe UI/Arial.
+// Increase slightly (e.g. 0.55) if content wraps more than expected;
+// decrease (e.g. 0.45) if pages are underestimating content height.
+const AVG_CHAR_WIDTH_RATIO = 0.5;
+
 /** Items are highlighted as "new" if their posted date (or the
  *  start of the current recurrence cycle) is within this many days. */
 const NEW_ITEM_THRESHOLD_DAYS = 3;
@@ -626,10 +638,89 @@ function formatDateTime(date) {
   });
 }
 
+// Estimates the rendered pixel height of a single news card based on
+// its content. Used server-side to divide items into pages without
+// any client-side layout measurement. All values derived from the
+// CSS constants defined in renderHtml.
+//
+// Estimation strategy:
+//   - Fixed overhead: card padding + title + meta block + margins
+//   - Variable: body text lines estimated from character count and
+//     characters-per-line (derived from layout width and font size)
+//
+// charsPerLine: estimated characters per line for the body font at
+//   the current layout width.
+function estimateCardHeight(item, charsPerLine) {
+  var BASE_PX            = 16;                      // browser default rem base
+  var TITLE_FONT_PX      = 2.6  * BASE_PX;          // 41.6px
+  var META_FONT_PX       = 0.8  * BASE_PX;          // 12.8px
+  var BODY_FONT_PX       = 1.4  * BASE_PX;          // 22.4px
+  var CARD_PAD_V         = 0.8  * BASE_PX * 2;      // 25.6px (top + bottom)
+  var CARD_MARGIN_BOTTOM = 0.65 * BASE_PX;          // 10.4px
+  var TITLE_MARGIN_BTM   = 0.3  * BASE_PX;          // 4.8px
+  var META_MARGIN_BTM    = 0.65 * BASE_PX;          // 10.4px
+  var DIVIDER_H          = 2 + (0.45 * BASE_PX);    // 9.2px (regular cards only)
+  var META_LINE_H_RATIO  = CARD_META_LINE_HEIGHT;   // 1.6
+  var BODY_LINE_H_RATIO  = CARD_BODY_LINE_HEIGHT;   // 1.25
+
+  // Title: assume 1 line at 1.2 line-height + margin
+  var titleH = (TITLE_FONT_PX * 1.2) + TITLE_MARGIN_BTM;   // ~55px
+
+  // Divider: only on regular (non-new) cards
+  var dividerH = item.isNew ? 0 : DIVIDER_H;
+
+  // Meta block: always 3 lines (Posted, Expires, Posted By)
+  var metaLineH = META_FONT_PX * META_LINE_H_RATIO;         // ~20.5px
+  var metaH     = (metaLineH * 3) + META_MARGIN_BTM;        // ~72px
+
+  // Body: estimate lines from text length, minimum 1 line
+  var bodyText  = item.text ? item.text : '';
+  var lineCount = Math.max(1, Math.ceil(bodyText.length / Math.max(1, charsPerLine)));
+  var bodyH     = BODY_FONT_PX * BODY_LINE_H_RATIO * lineCount;
+
+  return CARD_PAD_V + titleH + dividerH + metaH + bodyH + CARD_MARGIN_BOTTOM;
+}
+
+// Divides news items into pages using greedy bin-packing.
+// Fills each page until adding the next card would exceed availableHeight,
+// then starts a new page. Returns an array of item arrays (one per page).
+//
+// layout: the LAYOUTS entry for the current display (has .width, .height)
+// items:  active sorted news items
+function buildPages(items, layout) {
+  var BASE_PX        = 16;
+  var BODY_PAD_V     = 0.75 * BASE_PX * 2;   // 24px body padding top+bottom
+  var BODY_PAD_H     = 0.75 * BASE_PX * 2;   // 24px body padding left+right
+  var BODY_FONT_PX   = 1.4  * BASE_PX;        // 22.4px
+
+  var availableH  = layout.height - BODY_PAD_V;
+  var contentW    = layout.width  - BODY_PAD_H;
+  var charsPerLine = Math.floor(contentW / (BODY_FONT_PX * AVG_CHAR_WIDTH_RATIO));
+
+  var pages       = [];
+  var currentPage = [];
+  var currentH    = 0;
+
+  for (var i = 0; i < items.length; i++) {
+    var cardH = estimateCardHeight(items[i], charsPerLine);
+    if (currentPage.length > 0 && currentH + cardH > availableH) {
+      // Current page is full — start a new one
+      pages.push(currentPage);
+      currentPage = [items[i]];
+      currentH    = cardH;
+    } else {
+      currentPage.push(items[i]);
+      currentH += cardH;
+    }
+  }
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+  return pages.length > 0 ? pages : [[]];
+}
+
 /**
  * Renders the complete HTML page for the news display.
- * Scroll constants are injected as inline JS variables so the
- * client-side scroll logic uses the server-side configuration values.
  *
  * @param {object[]} items   - Active, sorted news items
  * @param {string}   layout  - Validated layout parameter
@@ -640,14 +731,28 @@ function formatDateTime(date) {
  */
 function renderHtml(items, layout, tabName, darkBg) {
 
+  var pages    = items.length === 0 ? [[]] : buildPages(items, LAYOUTS[layout] || LAYOUTS['wide']);
+  var numPages = pages.length;
+
+  // Divide display time equally across pages, with a minimum per page
+  // so content is always readable even with many short items.
+  var pageHoldMs = Math.max(
+    MIN_PAGE_HOLD_SECONDS * 1000,
+    Math.floor((DISPLAY_DURATION_SECONDS * 1000) / numPages)
+  );
+
   // Build card HTML. Track new/regular counts separately so the
   // alternating color resets independently between the two groups.
   let newCount     = 0;
   let regularCount = 0;
 
-  const cardsHtml = items.length === 0
-    ? '<div class="no-news">No current news</div>'
-    : items.map(function (item) {
+  const pagesHtml = pages.map(function (pageItems, pageIndex) {
+    var pageCardsHtml;
+
+    if (items.length === 0) {
+      pageCardsHtml = '<div class="no-news">No current news</div>';
+    } else {
+      pageCardsHtml = pageItems.map(function (item) {
 
         let bgColor;
         let cardStyle;
@@ -694,62 +799,31 @@ function renderHtml(items, layout, tabName, darkBg) {
             '<div class="card-meta">' +
               '<div><strong>Posted:</strong> '    + formatDateTime(item.activePosted)  + '</div>' +
               '<div><strong>Expires:</strong> '   + formatDateTime(item.activeExpires) + '</div>' +
-              '<div><strong>Posted By:</strong> ' + (escapeHtml(item.postedBy) || '\u2014') + '</div>' +
+              '<div><strong>Posted By:</strong> ' + (escapeHtml(item.postedBy) || '—') + '</div>' +
             '</div>' +
             '<div class="card-body">' + safeBody + '</div>' +
           '</div>'
         );
       }).join('');
+    }
 
-  // Inline scroll script — configuration constants injected from Worker.
-  const scrollScript =
-    '(function () {' +
-    '  var DISPLAY_DURATION_SECONDS = ' + DISPLAY_DURATION_SECONDS + ';' +
-    '  var SCROLL_PAUSE_SECONDS     = ' + SCROLL_PAUSE_SECONDS     + ';' +
-    '  var MIN_SPEED                = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
-    '  var MAX_SPEED                = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
-    '  function initScroll(attempt) {' +
-    '    attempt = attempt || 0;' +
-    '    var outer = document.getElementById("scroller");' +
-    '    var inner = document.getElementById("scroll-inner");' +
-    '    if (!outer || !inner) return;' +
-    '    if (inner.dataset.noScroll) return;' +
-    '    var viewH  = outer.clientHeight || window.innerHeight;' +
-    '    var totalH = inner.offsetHeight;' +
-    '    if ((viewH === 0 || totalH === 0) && attempt < 20) {' +
-    '      setTimeout(function() { initScroll(attempt + 1); }, 100);' +
-    '      return;' +
-    '    }' +
-    '    if (totalH <= viewH + 2) return;' +
-    '    var overflow      = totalH - viewH;' +
-    '    var availableTime = Math.max(1, DISPLAY_DURATION_SECONDS - (2 * SCROLL_PAUSE_SECONDS));' +
-    '    var rawSpeed      = overflow / availableTime;' +
-    '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, rawSpeed));' +
-    '    var actualScrollTime = overflow / speed;' +
-    '    var totalDuration    = SCROLL_PAUSE_SECONDS + actualScrollTime + SCROLL_PAUSE_SECONDS;' +
-    '    var pauseTopPct      = (SCROLL_PAUSE_SECONDS / totalDuration) * 100;' +
-    '    var pauseBottomPct   = 100 - ((SCROLL_PAUSE_SECONDS / totalDuration) * 100);' +
-    '    var animationName    = "ffd-scroll-" + Date.now();' +
-    '    var keyframes =' +
-    '      "@keyframes " + animationName + " {" +' +
-    '        "0% { transform: translateY(0); }" +' +
-    '        pauseTopPct.toFixed(2) + "% { transform: translateY(0); }" +' +
-    '        pauseBottomPct.toFixed(2) + "% { transform: translateY(-" + overflow + "px); }" +' +
-    '        "100% { transform: translateY(-" + overflow + "px); }" +' +
-    '      "}";' +
-    '    var styleEl = document.createElement("style");' +
-    '    styleEl.textContent = keyframes;' +
-    '    document.head.appendChild(styleEl);' +
-    '    inner.style.animation = animationName + " " + totalDuration + "s linear infinite";' +
-    '  }' +
-    '  if (document.readyState === "complete") {' +
-    '    setTimeout(initScroll, 500);' +
-    '  } else {' +
-    '    window.addEventListener("load", function () {' +
-    '      setTimeout(initScroll, 500);' +
-    '    });' +
-    '  }' +
-    '}());';
+    var opacity = pageIndex === 0 ? '1' : '0';
+    return '<div class="page" style="opacity:' + opacity + ';transition:opacity 0.5s;">' + pageCardsHtml + '</div>';
+  }).join('');
+
+  var flipScript = '';
+  if (numPages > 1) {
+    flipScript =
+      '(function(){' +
+      '  var pages   = document.querySelectorAll(".page");' +
+      '  var current = 0;' +
+      '  setInterval(function(){' +
+      '    pages[current].style.opacity = "0";' +
+      '    current = (current + 1) % pages.length;' +
+      '    pages[current].style.opacity = "1";' +
+      '  }, ' + pageHoldMs + ');' +
+      '}());';
+  }
 
   const css =
     '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
@@ -765,13 +839,18 @@ function renderHtml(items, layout, tabName, darkBg) {
     '  overflow: hidden;' +
     '}' +
 
-    '#scroller {' +
+    '#pages-container {' +
+    '  position: relative;' +
     '  height: 100%;' +
-    '  overflow: hidden;' +
     '}' +
 
-    '#scroll-inner {' +
-    '  will-change: transform;' +
+    '.page {' +
+    '  position: absolute;' +
+    '  top: 0;' +
+    '  left: 0;' +
+    '  width: 100%;' +
+    '  height: 100%;' +
+    '  overflow: hidden;' +
     '}' +
 
     '.no-news {' +
@@ -848,17 +927,14 @@ function renderHtml(items, layout, tabName, darkBg) {
     '<style>' + css + '</style>' +
     '</head>' +
     '<body>' +
-    '<div id="scroller">' +
-    '<div id="scroll-inner"' + (items.length === 0 ? ' data-no-scroll="1"' : '') + '>' +
-    cardsHtml +
+    '<div id="pages-container">' +
+    pagesHtml +
     '</div>' +
-    '</div>' +
-    '<script>' + scrollScript + '</script>' +
+    (flipScript ? '<script>' + flipScript + '</script>' : '') +
     '</body>' +
     '</html>'
   );
 }
-
 
 // ================================================================
 // SCHEDULED CLEANUP — Cron-triggered expired row deletion
