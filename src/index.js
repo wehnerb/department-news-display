@@ -20,7 +20,7 @@ const MIN_SCROLL_SPEED_PX_PER_SEC = 20;
 const MAX_SCROLL_SPEED_PX_PER_SEC = 120;
 
 const CACHE_SECONDS = 300;
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 const FONT_SIZE_TITLE = '2.6rem';
 const FONT_SIZE_META = '0.8rem';
