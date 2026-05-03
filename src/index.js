@@ -11,20 +11,20 @@ const DISPLAY_DURATION_SECONDS = 20;
 const NEW_ITEM_THRESHOLD_DAYS = 3;
 
 /** Seconds to pause at the top and bottom of the scroll.[cite: 3] */
-const SCROLL_PAUSE_SECONDS = 3;
+const SCROLL_PAUSE_SECONDS = 5;
 
 /** Minimum allowed scroll speed.[cite: 3] */
 const MIN_SCROLL_SPEED_PX_PER_SEC = 20;
 
 /** Maximum allowed scroll speed.[cite: 3] */
-const MAX_SCROLL_SPEED_PX_PER_SEC = 120;
+const MAX_SCROLL_SPEED_PX_PER_SEC = 100;
 
 const CACHE_SECONDS = 300;
 const CACHE_VERSION = 2;
 
 const FONT_SIZE_TITLE = '2.6rem';
 const FONT_SIZE_META = '0.8rem';
-const FONT_SIZE_BODY = '1.3rem';
+const FONT_SIZE_BODY = '1.4rem';
 const CARD_BODY_LINE_HEIGHT = 1.25;
 const CARD_META_LINE_HEIGHT = 1.6;
 
