@@ -67,20 +67,52 @@ export default {
     }
 
     const url = new URL(request.url);
-     if (url.pathname === '/healthz') {
+    if (url.pathname === '/healthz') {
       const method = request.method.toUpperCase();
       let healthStatus = 'healthy';
       const details = [];
+
+      // 1. Check for required environment variables
       const hasSheetId = !!(env.GOOGLE_SHEET_ID);
       const hasEmail   = !!(env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
       const hasKey     = !!(env.GOOGLE_PRIVATE_KEY);
+
       if (!hasSheetId) { healthStatus = 'degraded'; details.push('GOOGLE_SHEET_ID: not configured'); }
       if (!hasEmail)   { healthStatus = 'degraded'; details.push('GOOGLE_SERVICE_ACCOUNT_EMAIL: not configured'); }
       if (!hasKey)     { healthStatus = 'degraded'; details.push('GOOGLE_PRIVATE_KEY: not configured'); }
+
+      // 2. Probe Google API reachability (Ported from index (1).js)
+      let apiDetail = '';
+      try {
+        const probeRes = await fetchWithTimeout(
+          'https://oauth2.googleapis.com/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'grant_type=placeholder',
+          },
+          5000
+        );
+        // A 400 response is expected for a placeholder grant, confirming reachability
+        if (probeRes.status === 400) {
+          apiDetail = 'google-apis: reachable';
+        } else {
+          healthStatus = 'degraded';
+          apiDetail = 'google-apis: unexpected status ' + probeRes.status;
+        }
+      } catch (e) {
+        healthStatus = 'degraded';
+        apiDetail = 'google-apis: unreachable (' + (e && e.message ? e.message : String(e)) + ')';
+      }
+      
+      details.push(apiDetail);
+
+      // 3. Construct the response body[cite: 1, 2]
       const healthBody =
         'status: ' + healthStatus + '\n' +
         'worker: department-news-display\n' +
-        (details.length ? details.join('\n') + '\n' : '');
+        details.join('\n') + '\n';
+
       return new Response(
         method === 'HEAD' ? null : healthBody,
         {
