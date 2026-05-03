@@ -44,18 +44,6 @@ const AVG_CHAR_WIDTH_RATIO = 0.5;
  *  start of the current recurrence cycle) is within this many days. */
 const NEW_ITEM_THRESHOLD_DAYS = 3;
 
-/** Seconds to pause before auto-scroll begins, giving viewers
- *  time to start reading before the content starts moving. */
-const SCROLL_PAUSE_SECONDS = 3;
-
-/** Slowest allowed scroll speed in pixels per second.
- *  Prevents content from scrolling too slowly to finish in time. */
-const MIN_SCROLL_SPEED_PX_PER_SEC = 20;
-
-/** Fastest allowed scroll speed in pixels per second.
- *  Prevents content from scrolling too fast to be readable. */
-const MAX_SCROLL_SPEED_PX_PER_SEC = 120;
-
 /** How long to cache Google Sheets API responses, in seconds.
  *  Reduces API calls; increase if the sheet changes infrequently. */
 const CACHE_SECONDS = 300;
@@ -923,6 +911,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '<head>' +
     '<meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<meta http-equiv="refresh" content="' + DISPLAY_DURATION_SECONDS + '">' +
     '<title>' + escapeHtml(tabName) + ' News</title>' +
     '<style>' + css + '</style>' +
     '</head>' +
