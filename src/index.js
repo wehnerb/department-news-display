@@ -38,7 +38,7 @@ const MIN_PAGE_HOLD_SECONDS = 5;
 // If page 1 appears briefly before the flip starts, increase this value.
 // If the flip starts before page 1 is fully visible, decrease it.
 // Start at 5500 and adjust in 500ms increments based on hardware observation.
-const PAGE_FLIP_DELAY_MS = 10500;
+const PAGE_FLIP_DELAY_MS = 500;
 
 // Average character width as a fraction of font size (em units).
 // Used to estimate how many characters fit per line of body text.
