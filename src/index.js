@@ -33,6 +33,13 @@ const DISPLAY_DURATION_SECONDS = 20;
 // are many pages within a short DISPLAY_DURATION_SECONDS window.
 const MIN_PAGE_HOLD_SECONDS = 5;
 
+// Milliseconds to delay before starting the page-flip timer.
+// Used to compensate for hardware preloading the iframe before displaying it.
+// If page 1 appears briefly before the flip starts, increase this value.
+// If the flip starts before page 1 is fully visible, decrease it.
+// Start at 5500 and adjust in 500ms increments based on hardware observation.
+const PAGE_FLIP_DELAY_MS = 5500;
+
 // Average character width as a fraction of font size (em units).
 // Used to estimate how many characters fit per line of body text.
 // 0.5 is appropriate for proportional sans-serif fonts like Segoe UI/Arial.
@@ -801,15 +808,17 @@ function renderHtml(items, layout, tabName, darkBg) {
 
   var flipScript = '';
   if (numPages > 1) {
-    flipScript =
+        flipScript =
       '(function(){' +
       '  var pages   = document.querySelectorAll(".page");' +
       '  var current = 0;' +
-      '  setInterval(function(){' +
-      '    pages[current].style.opacity = "0";' +
-      '    current = (current + 1) % pages.length;' +
-      '    pages[current].style.opacity = "1";' +
-      '  }, ' + pageHoldMs + ');' +
+      '  setTimeout(function(){' +
+      '    setInterval(function(){' +
+      '      pages[current].style.opacity = "0";' +
+      '      current = (current + 1) % pages.length;' +
+      '      pages[current].style.opacity = "1";' +
+      '    }, ' + pageHoldMs + ');' +
+      '  }, ' + PAGE_FLIP_DELAY_MS + ');' +
       '}());';
   }
 
