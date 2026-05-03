@@ -64,13 +64,13 @@ const FONT_SIZE_META = '0.8rem';
 const FONT_SIZE_BODY = '1.3rem';
 
 // Line height for the card body text (news item content).
-// 1.55 = current default. Increase for more breathing room between lines,
+// Increase for more breathing room between lines,
 // decrease to fit more content per card. Applies to all body text including
 // items with line breaks entered in the sheet.
 const CARD_BODY_LINE_HEIGHT = 1.25;
 
 // Line height for the card metadata block (Posted, Expires, Posted By).
-// 1.6 = current default. Adjust alongside CARD_BODY_LINE_HEIGHT if needed.
+// Adjust alongside CARD_BODY_LINE_HEIGHT if needed.
 const CARD_META_LINE_HEIGHT = 1.6;
 
 // --- Card color configuration ---
