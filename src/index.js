@@ -350,7 +350,7 @@ function processRows(rows, now) {
 }
 
 function formatDateTime(date) {
-  return date.toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+  return date.toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 // =============================================================================
