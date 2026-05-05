@@ -34,37 +34,42 @@ import { LAYOUTS } from './shared/layouts.js';
 // CONFIGURATION
 // =============================================================================
 
-/** Total seconds the news slide is shown on the display.[cite: 3] */
+/** Total seconds the news slide is shown on the display.*/
 const DISPLAY_DURATION_SECONDS = 20;
 
-/** Items are highlighted as "new" if posted within these days.[cite: 3] */
+/** Items are highlighted as "new" if posted within these days.*/
 const NEW_ITEM_THRESHOLD_DAYS = 3;
 
-/** Seconds to pause at the top and bottom of the scroll.[cite: 3] */
+/** Seconds to pause at the top and bottom of the scroll.*/
 const SCROLL_PAUSE_SECONDS = 5;
 
-/** Minimum allowed scroll speed.[cite: 3] */
+/** Minimum allowed scroll speed.*/
 const MIN_SCROLL_SPEED_PX_PER_SEC = 20;
 
-/** Maximum allowed scroll speed.[cite: 3] */
+/** Maximum allowed scroll speed.*/
 const MAX_SCROLL_SPEED_PX_PER_SEC = 75;
 
+/** Cache controls.  Change cache version to immediately force displays to update with the current information. Change cache time to set hope long (in seconds) the news is cached for.*/
 const CACHE_SECONDS = 300;
 const CACHE_VERSION = 2;
 
-const FONT_SIZE_TITLE = '2.6rem';
-const FONT_SIZE_META = '0.8rem';
-const FONT_SIZE_BODY = '1.4rem';
-const CARD_BODY_LINE_HEIGHT = 1.25;
-const CARD_META_LINE_HEIGHT = 1.6;
+/** Set text sizes for each part of the card. Increase rem multiplier to increase size*/
+const FONT_SIZE_TITLE = '2.6rem'; /** Title size */
+const FONT_SIZE_META = '0.8rem'; /** Meta data size */
+const FONT_SIZE_BODY = '1.4rem'; /** Body text size */
+const CARD_BODY_LINE_HEIGHT = 1.25; /** Line spacing for body text */
+const CARD_META_LINE_HEIGHT = 1.6; /** Line spacing for meta data */
 
+/** Colors for new and  older news cards. Alternates between A and B colors if there is more than 1 news item.**/
 const COLOR_REGULAR_A = 'rgba(255,255,255,0.06)';
 const COLOR_REGULAR_B = 'rgba(255,255,255,0.12)';
 const COLOR_NEW_A = 'rgba(210,210,210,0.20)';
 const COLOR_NEW_B = 'rgba(210,210,210,0.30)';
 
+/** Old news items will be deleted this many days after the expiration date. If this is set to -1, old items will not be deleted.*/
 const DELETE_EXPIRED_AFTER_DAYS = 14;
 
+/** Column positions on the spreadsheet. These should not be changed unless the layout of the spreadsheet changes.*/
 const COL_TITLE      = 0;
 const COL_TEXT       = 1;
 const COL_POSTED     = 2;
