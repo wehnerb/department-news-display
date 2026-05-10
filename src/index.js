@@ -21,9 +21,10 @@ import { LAYOUTS } from './shared/layouts.js';
 //   full  — 1920×1075
 //
 // Scroll behavior: if card content overflows the viewport, a CSS keyframe
-// animation scrolls content upward once per page load. ResizeObserver +
-// document.fonts.ready ensures measurement occurs after the Pi hardware
-// finishes font rendering. No scroll occurs when content fits on screen.
+// animation scrolls content upward once per page load. ResizeObserver fires
+// once as a layout-ready signal then disconnects immediately. Three
+// requestAnimationFrame calls defer measurement until layout is fully
+// settled; both readings must exceed 20 px before scrolling triggers.
 //
 // Secrets required (set in Cloudflare dashboard):
 //   GOOGLE_SERVICE_ACCOUNT_EMAIL — service account email
@@ -51,7 +52,7 @@ const MAX_SCROLL_SPEED_PX_PER_SEC = 75;
 
 /** Cache controls.  Change cache version to immediately force displays to update with the current information. Change cache time to set hope long (in seconds) the news is cached for.*/
 const CACHE_SECONDS = 300;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 /** Set text sizes for each part of the card. Increase rem multiplier to increase size*/
 const FONT_SIZE_TITLE = '2.6rem'; /** Title size */
@@ -364,9 +365,10 @@ function formatDateTime(date) {
 
 // Builds the self-contained HTML page for the news display.
 // Renders all active news items as cards. If content overflows the
-// visible area, a ResizeObserver measures the rendered height after
-// fonts are loaded and injects a CSS @keyframes animation that scrolls
-// content upward once, pausing at the top and bottom.
+// visible area, a three-frame rAF sequence measures the settled height
+// and injects a CSS @keyframes animation that scrolls content upward
+// once, pausing at the top and bottom. Both measurements must exceed
+// the 20 px THRESHOLD before scrolling is triggered.
 // Uses string concatenation throughout (no template literals) to avoid
 // smart-quote esbuild errors when editing in the GitHub browser editor.
 function renderHtml(items, layout, tabName, darkBg) {
@@ -421,43 +423,54 @@ function renderHtml(items, layout, tabName, darkBg) {
       }).join('');
 
   // ── Scroll animation script ────────────────────────────────────────
-  // Injected into the page as an inline <script>. Uses ResizeObserver to
-  // measure the rendered content height only after document.fonts.ready
-  // fires — this ensures the Pi hardware has finished font rendering before
-  // any height measurement is taken, making the scroll trigger reliable
-  // under CPU load. Generates a unique @keyframes animation name to avoid
-  // conflicts on repeated page loads. Disconnects the observer after the
-  // animation is applied so it runs at most once per page load.
+  // Injected into the page as an inline <script>. Uses ResizeObserver as a
+  // one-shot trigger that fires when initial layout is computed, then
+  // disconnects immediately. Measurement is deferred through three
+  // requestAnimationFrame calls: frame 1 skips to let fonts and layout
+  // settle; frame 2 takes an initial overflow reading; frame 3 confirms it.
+  // Both readings must exceed THRESHOLD (20 px) before the animation is
+  // applied. This eliminates false-positive scrolling caused by transient
+  // layout measurements during font-fallback resolution on Pi hardware.
+  // Generates a unique @keyframes name to avoid conflicts on repeated loads.
   const scrollScript =
     '(function () {' +
     '  var DURATION  = ' + DISPLAY_DURATION_SECONDS   + ';' +
     '  var PAUSE     = ' + SCROLL_PAUSE_SECONDS        + ';' +
     '  var MIN_SPEED = ' + MIN_SCROLL_SPEED_PX_PER_SEC + ';' +
     '  var MAX_SPEED = ' + MAX_SCROLL_SPEED_PX_PER_SEC + ';' +
+    '  var THRESHOLD = 20;' +
+
+    '  function applyScroll(inner, overflow) {' +
+    '    var availableTime = Math.max(1, DURATION - (2 * PAUSE));' +
+    '    var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, overflow / availableTime));' +
+    '    var scrollTime    = overflow / speed;' +
+    '    var totalTime     = PAUSE + scrollTime + PAUSE;' +
+    '    var pTop          = (PAUSE / totalTime) * 100;' +
+    '    var pBottom       = 100 - pTop;' +
+    '    var animName      = "scroll-" + Date.now();' +
+    '    var style         = document.createElement("style");' +
+    '    style.textContent = "@keyframes " + animName + " { 0%, " + pTop.toFixed(2) + "% { transform: translateY(0); } " + pBottom.toFixed(2) + "%, 100% { transform: translateY(-" + overflow + "px); } }";' +
+    '    document.head.appendChild(style);' +
+    '    inner.style.animation = animName + " " + totalTime + "s linear forwards";' +
+    '  }' +
 
     '  function startLogic() {' +
     '    var outer = document.getElementById("scroller");' +
     '    var inner = document.getElementById("scroll-inner");' +
     '    if (!outer || !inner || inner.dataset.noScroll) return;' +
-    '    var observer = new ResizeObserver(function(entries) {' +
-    '      for (var i = 0; i < entries.length; i++) {' +
-    '        var totalH = entries[i].contentRect.height;' +
-    '        var viewH  = outer.clientHeight;' +
-    '        if (totalH <= viewH + 5) return;' +
-    '        var overflow      = totalH - viewH;' +
-    '        var availableTime = Math.max(1, DURATION - (2 * PAUSE));' +
-    '        var speed         = Math.min(MAX_SPEED, Math.max(MIN_SPEED, overflow / availableTime));' +
-    '        var scrollTime    = overflow / speed;' +
-    '        var totalTime     = PAUSE + scrollTime + PAUSE;' +
-    '        var pTop          = (PAUSE / totalTime) * 100;' +
-    '        var pBottom       = 100 - pTop;' +
-    '        var animName      = "scroll-" + Date.now();' +
-    '        var style         = document.createElement("style");' +
-    '        style.textContent = "@keyframes " + animName + " { 0%, " + pTop.toFixed(2) + "% { transform: translateY(0); } " + pBottom.toFixed(2) + "%, 100% { transform: translateY(-" + overflow + "px); } }";' +
-    '        document.head.appendChild(style);' +
-    '        inner.style.animation = animName + " " + totalTime + "s linear forwards";' +
-    '        observer.disconnect();' +
-    '      }' +
+    '    var observer = new ResizeObserver(function() {' +
+    '      observer.disconnect();' +
+    '      requestAnimationFrame(function() {' +
+    '        requestAnimationFrame(function() {' +
+    '          var overflow1 = inner.getBoundingClientRect().height - outer.clientHeight;' +
+    '          if (overflow1 <= THRESHOLD) return;' +
+    '          requestAnimationFrame(function() {' +
+    '            var overflow2 = inner.getBoundingClientRect().height - outer.clientHeight;' +
+    '            if (overflow2 <= THRESHOLD) return;' +
+    '            applyScroll(inner, overflow2);' +
+    '          });' +
+    '        });' +
+    '      });' +
     '    });' +
     '    observer.observe(inner);' +
     '  }' +
