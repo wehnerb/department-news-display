@@ -52,7 +52,7 @@ const MAX_SCROLL_SPEED_PX_PER_SEC = 75;
 
 /** Cache controls.  Change cache version to immediately force displays to update with the current information. Change cache time to set hope long (in seconds) the news is cached for.*/
 const CACHE_SECONDS = 300;
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 /** Set text sizes for each part of the card. Increase rem multiplier to increase size*/
 const FONT_SIZE_TITLE = '2.6rem'; /** Title size */
@@ -462,6 +462,7 @@ function renderHtml(items, layout, tabName, darkBg) {
     '      observer.disconnect();' +
     '      requestAnimationFrame(function() {' +
     '        requestAnimationFrame(function() {' +
+    '          if (outer.clientHeight < 200) return;' +
     '          var overflow1 = inner.getBoundingClientRect().height - outer.clientHeight;' +
     '          if (overflow1 <= THRESHOLD) return;' +
     '          requestAnimationFrame(function() {' +
