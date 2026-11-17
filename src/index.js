@@ -36,7 +36,7 @@ import { LAYOUTS } from './shared/layouts.js';
 // =============================================================================
 
 /** Total seconds the news slide is shown on the display.*/
-const DISPLAY_DURATION_SECONDS = 20;
+const DISPLAY_DURATION_SECONDS = 15;
 
 /** Items are highlighted as "new" if posted within these days.*/
 const NEW_ITEM_THRESHOLD_DAYS = 3;
